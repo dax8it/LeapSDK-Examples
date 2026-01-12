@@ -3,6 +3,19 @@ import Foundation
 import LeapSDK
 import Observation
 
+enum ModelQuantization: String, CaseIterable, Identifiable {
+  // Note: Q4_0 not supported by LeapSDK 0.9.0 for audio models
+  case q8 = "Q8_0"
+  
+  var id: String { rawValue }
+  
+  var displayName: String {
+    switch self {
+    case .q8: return "Q8 (Quality, ~2GB)"
+    }
+  }
+}
+
 struct AudioDemoMessage: Identifiable, Equatable {
   let id = UUID()
   let role: ChatMessageRole
@@ -26,6 +39,8 @@ final class AudioDemoStore {
   var isModelLoading = false
   var isGenerating = false
   var isRecording = false
+  var selectedQuantization: ModelQuantization = .q8
+  var availableQuantizations: [ModelQuantization] = []
 
   private let playbackManager = AudioPlaybackManager()
   private let recorder = AudioRecorder()
@@ -38,25 +53,59 @@ final class AudioDemoStore {
   }
 
   func setupModel() async {
+    detectAvailableModels()
+    
+    // If selected model isn't available, switch to first available
+    if !availableQuantizations.contains(selectedQuantization),
+       let first = availableQuantizations.first {
+      selectedQuantization = first
+    }
+    
+    await loadModel()
+  }
+  
+  func switchModel(to quantization: ModelQuantization) async {
+    guard quantization != selectedQuantization || modelRunner == nil else { return }
+    selectedQuantization = quantization
+    
+    // Unload current model
+    modelRunner = nil
+    conversation = nil
+    messages.removeAll()
+    
+    await loadModel()
+  }
+  
+  private func detectAvailableModels() {
+    let bundle = Bundle.main
+    availableQuantizations = ModelQuantization.allCases.filter { quant in
+      bundle.url(forResource: "LFM2.5-Audio-1.5B-\(quant.rawValue)", withExtension: "gguf") != nil
+    }
+    print("Available quantizations: \(availableQuantizations.map { $0.rawValue })")
+  }
+  
+  private func loadModel() async {
     guard modelRunner == nil else { return }
     isModelLoading = true
-    status = "Loading model bundle..."
+    let quant = selectedQuantization.rawValue
+    status = "Loading \(selectedQuantization.displayName) model..."
 
-    guard let modelURL = findModelURL() else {
-      status = "No GGUF model found in bundle. Add an audio-capable model first."
+    guard let modelURL = findModelURL(quantization: quant) else {
+      status = "No \(quant) model found. Add model files first."
       isModelLoading = false
       return
     }
 
     do {
       let bundle = Bundle.main
-      let mmProjPath = bundle.url(forResource: "mmproj-LFM2.5-Audio-1.5B-Q8_0", withExtension: "gguf")?.path()
-      let audioTokenizerPath = bundle.url(forResource: "tokenizer-LFM2.5-Audio-1.5B-Q8_0", withExtension: "gguf")?.path()
-      let vocoderPath = bundle.url(forResource: "vocoder-LFM2.5-Audio-1.5B-Q8_0", withExtension: "gguf")?.path()
+      let mmProjPath = bundle.url(forResource: "mmproj-LFM2.5-Audio-1.5B-\(quant)", withExtension: "gguf")?.path()
+      let audioTokenizerPath = bundle.url(forResource: "tokenizer-LFM2.5-Audio-1.5B-\(quant)", withExtension: "gguf")?.path()
+      let vocoderPath = bundle.url(forResource: "vocoder-LFM2.5-Audio-1.5B-\(quant)", withExtension: "gguf")?.path()
       
-      print("mmProjPath: \(mmProjPath ?? "nil")")
-      print("audioTokenizerPath: \(audioTokenizerPath ?? "nil")")
-      print("vocoderPath: \(vocoderPath ?? "nil")")
+      print("Loading \(quant) model:")
+      print("  mmProjPath: \(mmProjPath ?? "nil")")
+      print("  audioTokenizerPath: \(audioTokenizerPath ?? "nil")")
+      print("  vocoderPath: \(vocoderPath ?? "nil")")
       
       var options = LiquidInferenceEngineOptions(
         bundlePath: modelURL.path(),
@@ -76,11 +125,11 @@ final class AudioDemoStore {
       messages.append(
         AudioDemoMessage(
           role: .assistant,
-          text: "Model loaded: \(modelURL.lastPathComponent)",
+          text: "Model loaded: \(selectedQuantization.displayName)",
           audioData: nil
         )
       )
-      status = "Ready"
+      status = "Ready (\(selectedQuantization.displayName))"
     } catch {
       status = "Failed to load model: \(error.localizedDescription)"
     }
@@ -270,25 +319,23 @@ final class AudioDemoStore {
     }
   }
 
-  private func findModelURL() -> URL? {
+  private func findModelURL(quantization: String) -> URL? {
     let bundle = Bundle.main
-    print("Bundle: \(bundle.bundlePath)")
-    print("Bundle GGUF resources: \(bundle.urls(forResourcesWithExtension: "gguf", subdirectory: nil) ?? [])")
+    let modelName = "LFM2.5-Audio-1.5B-\(quantization)"
     
-    let candidates = [
-      "LFM2.5-Audio-1.5B-Q8_0"
-    ]
-    for name in candidates {
-      if let url = bundle.url(forResource: name, withExtension: "gguf") {
-        print("Found model at: \(url)")
-        return url
-      }
-      if let url = bundle.url(forResource: name, withExtension: "gguf", subdirectory: "Resources") {
-        print("Found model in Resources: \(url)")
-        return url
-      }
+    print("Bundle: \(bundle.bundlePath)")
+    print("Looking for model: \(modelName)")
+    
+    if let url = bundle.url(forResource: modelName, withExtension: "gguf") {
+      print("Found model at: \(url)")
+      return url
     }
-    print("No model found in bundle")
+    if let url = bundle.url(forResource: modelName, withExtension: "gguf", subdirectory: "Resources") {
+      print("Found model in Resources: \(url)")
+      return url
+    }
+    
+    print("No \(modelName) model found in bundle")
     return nil
   }
 }

@@ -100,6 +100,29 @@ struct AudioDemoView: View {
       }
       .padding()
       .navigationTitle("Audio Demo")
+      .toolbar {
+        ToolbarItem(placement: .navigationBarTrailing) {
+          if store.availableQuantizations.count > 1 {
+            Menu {
+              ForEach(store.availableQuantizations) { quant in
+                Button {
+                  Task { await store.switchModel(to: quant) }
+                } label: {
+                  HStack {
+                    Text(quant.displayName)
+                    if quant == store.selectedQuantization {
+                      Image(systemName: "checkmark")
+                    }
+                  }
+                }
+              }
+            } label: {
+              Label(store.selectedQuantization.rawValue, systemImage: "cpu")
+            }
+            .disabled(store.isModelLoading || store.isGenerating)
+          }
+        }
+      }
     }
     .task {
       await store.setupModel()

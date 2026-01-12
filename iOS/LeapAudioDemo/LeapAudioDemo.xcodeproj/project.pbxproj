@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -14,6 +14,7 @@
 		6238DC43629096521121BF99 /* AudioDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BE149F781D99A21E58820F2 /* AudioDemoView.swift */; };
 		782645AA45321AF1158C0B75 /* AudioPlaybackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */; };
 		D488582DA22FA4FEAC48CC0D /* AudioDemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53ECF28854F137D471134B12 /* AudioDemoStore.swift */; };
+		DDF57D7E32B15A87EB77CEEA /* LeapModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = 0C96DE1B168FC86D42742A1D /* LeapModelDownloader */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,7 +22,7 @@
 		41A83AB90368E259DC45FDF0 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		4FA776FD950E1203A3F9F6EE /* AudioDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDemoApp.swift; sourceTree = "<group>"; };
 		53ECF28854F137D471134B12 /* AudioDemoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDemoStore.swift; sourceTree = "<group>"; };
-		53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LeapAudioDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LeapAudioDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlaybackManager.swift; sourceTree = "<group>"; };
 		D8B333E3DE9AD29A8F7F3E7E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -32,6 +33,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				40646CD03E26F84C140CF55D /* LeapSDK in Frameworks */,
+				DDF57D7E32B15A87EB77CEEA /* LeapModelDownloader in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,6 +87,7 @@
 				66DAD5D207DE2B52A444B81B /* Sources */,
 				981C1E8935477DC4A32D940B /* Resources */,
 				3DBE36D5058D94B591426B99 /* Frameworks */,
+				E37AB44BB70482FDFD525CF4 /* Copy GGUF Models */,
 			);
 			buildRules = (
 			);
@@ -93,6 +96,7 @@
 			name = LeapAudioDemo;
 			packageProductDependencies = (
 				1B537F7C0CA9A53E4676FC92 /* LeapSDK */,
+				0C96DE1B168FC86D42742A1D /* LeapModelDownloader */,
 			);
 			productName = LeapAudioDemo;
 			productReference = 53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */;
@@ -106,8 +110,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = C956CEDA372EC2837C338AA5 /* Build configuration list for PBXProject "LeapAudioDemo" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -122,7 +124,6 @@
 			packageReferences = (
 				EEB06B02FCFD643A3391DC2C /* XCRemoteSwiftPackageReference "leap-ios" */,
 			);
-			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -141,6 +142,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E37AB44BB70482FDFD525CF4 /* Copy GGUF Models */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy GGUF Models";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cp -f \"${SRCROOT}/LeapAudioDemo/Resources\"/*.gguf \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		66DAD5D207DE2B52A444B81B /* Sources */ = {
@@ -163,6 +186,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = WH7Z9N74X5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input is used to capture prompts.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -171,7 +195,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				"INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad" = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -231,7 +255,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -248,6 +272,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = WH7Z9N74X5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input is used to capture prompts.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -256,7 +281,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				"INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad" = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -322,7 +347,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -364,12 +389,17 @@
 			repositoryURL = "https://github.com/liquid4all/leap-ios";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.7.0;
+				minimumVersion = 0.9.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0C96DE1B168FC86D42742A1D /* LeapModelDownloader */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EEB06B02FCFD643A3391DC2C /* XCRemoteSwiftPackageReference "leap-ios" */;
+			productName = LeapModelDownloader;
+		};
 		1B537F7C0CA9A53E4676FC92 /* LeapSDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = EEB06B02FCFD643A3391DC2C /* XCRemoteSwiftPackageReference "leap-ios" */;
