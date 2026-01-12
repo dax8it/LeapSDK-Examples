@@ -64,6 +64,8 @@ iOSInjectionProject/
 
 *.xcframework/
 
+iOS/LeapAudioDemo.zip
+
 ####################
 # Android
 ####################
