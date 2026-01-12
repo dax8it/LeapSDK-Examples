@@ -1,38 +1,60 @@
 # LeapAudioDemo
 
-A SwiftUI app demonstrating audio input and output with the LeapSDK for on-device AI inference.
+A SwiftUI app demonstrating audio input and output with the LeapSDK for on-device AI inference using the LFM2.5 Audio model.
 
 ## Features
 
 - Real-time audio recording and playback
-- Audio processing with AI models
+- Audio processing with LFM2.5 Audio model
 - Demonstrates LeapSDK integration with audio handling
-- Example of audio stream management
+- Streaming audio response playback
 - Local on-device AI inference
 - Microphone permission handling
 
 ## Requirements
 
-- iOS 17.0+
+- iOS 18.0+
 - Xcode 15.0+
 - XcodeGen: `brew install xcodegen`
+- Python 3.8+ (for downloading models)
 
 ## Getting Started
 
-1. **Setup the project:**
-   ```bash
-   make setup
-   ```
+### 1. Download the LFM2.5 Audio Model
 
-2. **Open in Xcode:**
-   ```bash
-   make open
-   ```
+Install the leap-bundle tool and download the model files:
+```bash
+pip install leap-bundle
+leap-bundle download LFM2.5-Audio-1.5B --quantization=Q8_0
+```
 
-3. **Build and run:**
-   - Select a simulator or device
-   - Press Cmd+R to build and run
-   - Grant microphone permission when prompted
+This downloads 4 required GGUF files:
+- `LFM2.5-Audio-1.5B-Q8_0.gguf` (main language model, ~1.2GB)
+- `mmproj-LFM2.5-Audio-1.5B-Q8_0.gguf` (audio encoder projection, ~332MB)
+- `vocoder-LFM2.5-Audio-1.5B-Q8_0.gguf` (audio decoder/waveform generator, ~280MB)
+- `tokenizer-LFM2.5-Audio-1.5B-Q8_0.gguf` (audio tokenizer, ~77MB)
+
+### 2. Copy Model Files to Resources
+
+Copy all `.gguf` files to `LeapAudioDemo/Resources/`:
+```bash
+cp LiquidAI_LeapBundles_LFM2_5_Audio_1_5B_GGUF_Q8_0/*.gguf LeapAudioDemo/Resources/
+```
+
+### 3. Setup the Project
+```bash
+make setup
+```
+
+### 4. Open in Xcode
+```bash
+make open
+```
+
+### 5. Build and Run
+- Select an iOS 18.0+ device (simulator or physical)
+- Press Cmd+R to build and run
+- Grant microphone permission when prompted
 
 ## Usage
 
@@ -59,8 +81,11 @@ LeapAudioDemo/
     ├── AudioPlaybackManager.swift     # Audio playback
     ├── AudioDemoStore.swift           # Business logic
     ├── Assets.xcassets               # App assets
-    └── Resources/                    # Model bundles
-        └── LFM2-Audio-1.5B-Q8_0.gguf
+    └── Resources/                    # Model bundles (add GGUF files here)
+        ├── LFM2.5-Audio-1.5B-Q8_0.gguf
+        ├── mmproj-LFM2.5-Audio-1.5B-Q8_0.gguf
+        ├── vocoder-LFM2.5-Audio-1.5B-Q8_0.gguf
+        └── tokenizer-LFM2.5-Audio-1.5B-Q8_0.gguf
 ```
 
 ## Code Overview
@@ -126,12 +151,20 @@ The app uses the LeapSDK to:
 - Extend `AudioPlaybackManager.swift` for advanced playback options
 
 ### Model Configuration
-Update the model path in `AudioDemoStore.swift`:
+The model is configured in `AudioDemoStore.swift` with companion file paths:
 ```swift
-let modelRunner = try await Leap.load(
-    modelPath: Bundle.main.bundlePath + "/LFM2-Audio-1.5B-Q8_0.gguf"
+var options = LiquidInferenceEngineOptions(
+    bundlePath: modelURL.path(),
+    contextSize: 8192,
+    nGpuLayers: 0,
+    mmProjPath: mmProjPath,
+    audioDecoderPath: vocoderPath,
+    audioTokenizerPath: audioTokenizerPath
 )
+let runner = try Leap.load(options: options)
 ```
+
+**Note**: The LFM2.5 audio engine requires a fresh conversation for each turn (audio history is not replayable). The app handles this automatically.
 
 ## Permissions
 

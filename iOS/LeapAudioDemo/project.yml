@@ -4,7 +4,7 @@ options:
   createIntermediateGroups: true
   defaultConfig: Debug
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "18.0"
   developmentLanguage: en
 
 configs:
@@ -18,13 +18,13 @@ settings:
 packages:
   LeapSDK:
     url: https://github.com/liquid4all/leap-ios
-    from: 0.7.0
+    from: 0.9.0
 
 targets:
   LeapAudioDemo:
     type: application
     platform: iOS
-    deploymentTarget: "17.0"
+    deploymentTarget: "18.0"
     sources:
       - path: LeapAudioDemo
         excludes:
@@ -33,11 +33,18 @@ targets:
       - path: LeapAudioDemo/Assets.xcassets
         name: Assets
       - path: LeapAudioDemo/Resources
-        name: Resources
-        createIntermediateGroups: true
+        excludes:
+          - ".gitkeep"
     dependencies:
       - package: LeapSDK
         product: LeapSDK
+      - package: LeapSDK
+        product: LeapModelDownloader
+    postBuildScripts:
+      - script: |
+          cp -f "${SRCROOT}/LeapAudioDemo/Resources"/*.gguf "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/"
+        name: Copy GGUF Models
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.liquid.examples.LeapAudioDemo
@@ -51,7 +58,7 @@ targets:
         INFOPLIST_KEY_UIBackgroundModes: "audio"
         SWIFT_EMIT_LOC_STRINGS: YES
         SWIFT_VERSION: "5.9"
-        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "18.0"
       configs:
         Debug:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG

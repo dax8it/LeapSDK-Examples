@@ -49,12 +49,24 @@ final class AudioDemoStore {
     }
 
     do {
-      let options = LiquidInferenceEngineOptions(
+      let bundle = Bundle.main
+      let mmProjPath = bundle.url(forResource: "mmproj-LFM2.5-Audio-1.5B-Q8_0", withExtension: "gguf")?.path()
+      let audioTokenizerPath = bundle.url(forResource: "tokenizer-LFM2.5-Audio-1.5B-Q8_0", withExtension: "gguf")?.path()
+      let vocoderPath = bundle.url(forResource: "vocoder-LFM2.5-Audio-1.5B-Q8_0", withExtension: "gguf")?.path()
+      
+      print("mmProjPath: \(mmProjPath ?? "nil")")
+      print("audioTokenizerPath: \(audioTokenizerPath ?? "nil")")
+      print("vocoderPath: \(vocoderPath ?? "nil")")
+      
+      var options = LiquidInferenceEngineOptions(
         bundlePath: modelURL.path(),
-        contextSize: 1024,
-        nGpuLayers: 0
+        contextSize: 8192,
+        nGpuLayers: 0,
+        mmProjPath: mmProjPath,
+        audioDecoderPath: vocoderPath,
+        audioTokenizerPath: audioTokenizerPath
       )
-      let runner = try await Leap.load(url: modelURL, options: options)
+      let runner = try Leap.load(options: options)
       modelRunner = runner
       conversation = Conversation(
         modelRunner: runner,
@@ -145,10 +157,19 @@ final class AudioDemoStore {
   }
 
   private func streamResponse(for message: ChatMessage) {
-    guard let conversation else {
+    guard let modelRunner else {
       status = "Model not ready yet."
       return
     }
+
+    // LFM2.5 audio engine requires fresh conversation for each turn
+    // ("messages are not replayable, need to start a new dialog")
+    let freshConversation = Conversation(
+      modelRunner: modelRunner,
+      history: [
+        ChatMessage(role: .system, content: [.text("Respond with interleaved text and audio.")])
+      ])
+    conversation = freshConversation
 
     playbackManager.reset()
     streamingTask?.cancel()
@@ -156,7 +177,7 @@ final class AudioDemoStore {
     status = "Awaiting response..."
     isGenerating = true
 
-    let stream = conversation.generateResponse(message: message)
+    let stream = freshConversation.generateResponse(message: message)
 
     streamingTask = Task { [weak self] in
       guard let self else { return }
@@ -195,6 +216,17 @@ final class AudioDemoStore {
   }
 
   private func finish(with completion: MessageCompletion) {
+    print("=== Response Complete ===")
+    print("Finish reason: \(completion.finishReason)")
+    print("Content count: \(completion.message.content.count)")
+    for (index, content) in completion.message.content.enumerated() {
+      switch content {
+      case .text(let t): print("  [\(index)] text: \(t.prefix(100))...")
+      case .audio(let d): print("  [\(index)] audio: \(d.count) bytes")
+      default: print("  [\(index)] other content type")
+      }
+    }
+    
     let text = completion.message.content.compactMap { content -> String? in
       if case .text(let value) = content {
         return value
@@ -203,6 +235,8 @@ final class AudioDemoStore {
     }.joined()
 
     let audioData = completion.message.content.firstAudioData
+    print("Final text: '\(text.prefix(200))'")
+    print("Audio data: \(audioData?.count ?? 0) bytes")
     messages.append(
       AudioDemoMessage(
         role: .assistant,
@@ -217,9 +251,8 @@ final class AudioDemoStore {
       ? "Response complete with audio."
       : finishReasonDescription(completion.finishReason)
 
-    if let audioData {
-      playbackManager.play(wavData: audioData)
-    }
+    // Audio already played via streaming (enqueue in handle(.audioSample))
+    // Don't play again here to avoid duplicate playback
   }
 
   private func handleGenerationError(_ error: Error) {
@@ -239,14 +272,23 @@ final class AudioDemoStore {
 
   private func findModelURL() -> URL? {
     let bundle = Bundle.main
+    print("Bundle: \(bundle.bundlePath)")
+    print("Bundle GGUF resources: \(bundle.urls(forResourcesWithExtension: "gguf", subdirectory: nil) ?? [])")
+    
     let candidates = [
-      "LFM2-Audio-1.5B-Q8_0"
+      "LFM2.5-Audio-1.5B-Q8_0"
     ]
     for name in candidates {
       if let url = bundle.url(forResource: name, withExtension: "gguf") {
+        print("Found model at: \(url)")
+        return url
+      }
+      if let url = bundle.url(forResource: name, withExtension: "gguf", subdirectory: "Resources") {
+        print("Found model in Resources: \(url)")
         return url
       }
     }
+    print("No model found in bundle")
     return nil
   }
 }
