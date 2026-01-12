@@ -95,7 +95,7 @@ final class CuratorAudioStore {
             
             let options = LiquidInferenceEngineOptions(
                 bundlePath: modelURL.path(),
-                contextSize: 8192,
+                contextSize: 4096,
                 nGpuLayers: 0,
                 mmProjPath: mmProjPath,
                 audioDecoderPath: vocoderPath,
