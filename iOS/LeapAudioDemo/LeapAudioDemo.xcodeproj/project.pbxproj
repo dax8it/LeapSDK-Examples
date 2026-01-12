@@ -15,6 +15,18 @@
 		782645AA45321AF1158C0B75 /* AudioPlaybackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */; };
 		D488582DA22FA4FEAC48CC0D /* AudioDemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53ECF28854F137D471134B12 /* AudioDemoStore.swift */; };
 		DDF57D7E32B15A87EB77CEEA /* LeapModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = 0C96DE1B168FC86D42742A1D /* LeapModelDownloader */; };
+		GA001AAA11111111AAAAAAAA /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA001AAA11111111BBBBBBBB /* Artist.swift */; };
+		GA002AAA22222222AAAAAAAA /* Artwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA002AAA22222222BBBBBBBB /* Artwork.swift */; };
+		GA003AAA33333333AAAAAAAA /* ExhibitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA003AAA33333333BBBBBBBB /* ExhibitStore.swift */; };
+		GA004AAA44444444AAAAAAAA /* CuratorContextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA004AAA44444444BBBBBBBB /* CuratorContextBuilder.swift */; };
+		GA005AAA55555555AAAAAAAA /* CuratorAudioStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA005AAA55555555BBBBBBBB /* CuratorAudioStore.swift */; };
+		GA006AAA66666666AAAAAAAA /* GalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA006AAA66666666BBBBBBBB /* GalleryView.swift */; };
+		GA007AAA77777777AAAAAAAA /* ArtworkDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA007AAA77777777BBBBBBBB /* ArtworkDetailView.swift */; };
+		GA008AAA88888888AAAAAAAA /* CuratorChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA008AAA88888888BBBBBBBB /* CuratorChatView.swift */; };
+		GA009AAA99999999AAAAAAAA /* IntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA009AAA99999999BBBBBBBB /* IntroView.swift */; };
+		GA010AAAAAAAAAAAAAAAAAAAA /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA010AAAAAAAAAAAABBBBBBBB /* RootTabView.swift */; };
+		GA011AAABBBBBBBBAAAAAAAA /* artist.json in Resources */ = {isa = PBXBuildFile; fileRef = GA011AAABBBBBBBBBBBBBBBB /* artist.json */; };
+		GA012AAACCCCCCCCAAAAAAAA /* works.json in Resources */ = {isa = PBXBuildFile; fileRef = GA012AAACCCCCCCCBBBBBBBB /* works.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +37,18 @@
 		53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LeapAudioDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlaybackManager.swift; sourceTree = "<group>"; };
 		D8B333E3DE9AD29A8F7F3E7E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		GA001AAA11111111BBBBBBBB /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
+		GA002AAA22222222BBBBBBBB /* Artwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artwork.swift; sourceTree = "<group>"; };
+		GA003AAA33333333BBBBBBBB /* ExhibitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitStore.swift; sourceTree = "<group>"; };
+		GA004AAA44444444BBBBBBBB /* CuratorContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuratorContextBuilder.swift; sourceTree = "<group>"; };
+		GA005AAA55555555BBBBBBBB /* CuratorAudioStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuratorAudioStore.swift; sourceTree = "<group>"; };
+		GA006AAA66666666BBBBBBBB /* GalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryView.swift; sourceTree = "<group>"; };
+		GA007AAA77777777BBBBBBBB /* ArtworkDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkDetailView.swift; sourceTree = "<group>"; };
+		GA008AAA88888888BBBBBBBB /* CuratorChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuratorChatView.swift; sourceTree = "<group>"; };
+		GA009AAA99999999BBBBBBBB /* IntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntroView.swift; sourceTree = "<group>"; };
+		GA010AAAAAAAAAAAABBBBBBBB /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		GA011AAABBBBBBBBBBBBBBBB /* artist.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = artist.json; sourceTree = "<group>"; };
+		GA012AAACCCCCCCCBBBBBBBB /* works.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = works.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +81,8 @@
 				A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */,
 				41A83AB90368E259DC45FDF0 /* AudioRecorder.swift */,
 				986D567A2ACD5C55D2211938 /* Views */,
+				GAGRP001GALLERYGRPAAAAAAA /* Gallery */,
+				GAGRP002APPSHELLGRPAAAAA /* AppShell */,
 			);
 			path = LeapAudioDemo;
 			sourceTree = "<group>";
@@ -75,6 +101,72 @@
 				53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		GAGRP001GALLERYGRPAAAAAAA /* Gallery */ = {
+			isa = PBXGroup;
+			children = (
+				GAGRP003MODELSGRPAAAAAAA /* Models */,
+				GAGRP004STORESGRPAAAAAAA /* Stores */,
+				GAGRP005VIEWSGRPAAAAAAAAA /* Views */,
+				GAGRP006DATAGRPAAAAAAAAAAA /* Data */,
+			);
+			path = Gallery;
+			sourceTree = "<group>";
+		};
+		GAGRP002APPSHELLGRPAAAAA /* AppShell */ = {
+			isa = PBXGroup;
+			children = (
+				GAGRP007APPSHELLVIEWSAAA /* Views */,
+			);
+			path = AppShell;
+			sourceTree = "<group>";
+		};
+		GAGRP003MODELSGRPAAAAAAA /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				GA001AAA11111111BBBBBBBB /* Artist.swift */,
+				GA002AAA22222222BBBBBBBB /* Artwork.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		GAGRP004STORESGRPAAAAAAA /* Stores */ = {
+			isa = PBXGroup;
+			children = (
+				GA003AAA33333333BBBBBBBB /* ExhibitStore.swift */,
+				GA004AAA44444444BBBBBBBB /* CuratorContextBuilder.swift */,
+				GA005AAA55555555BBBBBBBB /* CuratorAudioStore.swift */,
+			);
+			path = Stores;
+			sourceTree = "<group>";
+		};
+		GAGRP005VIEWSGRPAAAAAAAAA /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				GA006AAA66666666BBBBBBBB /* GalleryView.swift */,
+				GA007AAA77777777BBBBBBBB /* ArtworkDetailView.swift */,
+				GA008AAA88888888BBBBBBBB /* CuratorChatView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		GAGRP006DATAGRPAAAAAAAAAAA /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				GA011AAABBBBBBBBBBBBBBBB /* artist.json */,
+				GA012AAACCCCCCCCBBBBBBBB /* works.json */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		GAGRP007APPSHELLVIEWSAAA /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				GA009AAA99999999BBBBBBBB /* IntroView.swift */,
+				GA010AAAAAAAAAAAABBBBBBBB /* RootTabView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -138,6 +230,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				50893BA122E0D5C5D8893C9A /* Assets.xcassets in Resources */,
+				GA011AAABBBBBBBBAAAAAAAA /* artist.json in Resources */,
+				GA012AAACCCCCCCCAAAAAAAA /* works.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -175,6 +269,16 @@
 				6238DC43629096521121BF99 /* AudioDemoView.swift in Sources */,
 				782645AA45321AF1158C0B75 /* AudioPlaybackManager.swift in Sources */,
 				51CD55222E004D65D07C2374 /* AudioRecorder.swift in Sources */,
+				GA001AAA11111111AAAAAAAA /* Artist.swift in Sources */,
+				GA002AAA22222222AAAAAAAA /* Artwork.swift in Sources */,
+				GA003AAA33333333AAAAAAAA /* ExhibitStore.swift in Sources */,
+				GA004AAA44444444AAAAAAAA /* CuratorContextBuilder.swift in Sources */,
+				GA005AAA55555555AAAAAAAA /* CuratorAudioStore.swift in Sources */,
+				GA006AAA66666666AAAAAAAA /* GalleryView.swift in Sources */,
+				GA007AAA77777777AAAAAAAA /* ArtworkDetailView.swift in Sources */,
+				GA008AAA88888888AAAAAAAA /* CuratorChatView.swift in Sources */,
+				GA009AAA99999999AAAAAAAA /* IntroView.swift in Sources */,
+				GA010AAAAAAAAAAAAAAAAAAAA /* RootTabView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

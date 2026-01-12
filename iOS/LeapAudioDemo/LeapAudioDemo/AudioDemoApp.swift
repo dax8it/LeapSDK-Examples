@@ -4,7 +4,7 @@ import SwiftUI
 struct AudioDemoApp: App {
   var body: some Scene {
     WindowGroup {
-      AudioDemoView()
+      RootTabView()
     }
   }
 }
