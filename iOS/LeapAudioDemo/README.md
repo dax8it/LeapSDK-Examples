@@ -1,15 +1,21 @@
-# LeapAudioDemo
+# LeapAudioDemo — Gallery Curator
 
-A SwiftUI app demonstrating audio input and output with the LeapSDK for on-device AI inference using the LFM2.5 Audio model.
+A SwiftUI app demonstrating on-device AI audio interaction using the LeapSDK and LFM2.5 Audio model. Features a **Gallery Curator** mode where visitors can browse artworks and interact with an AI curator via voice.
 
 ## Features
 
+### Audio Demo (Original)
 - Real-time audio recording and playback
 - Audio processing with LFM2.5 Audio model
-- Demonstrates LeapSDK integration with audio handling
 - Streaming audio response playback
 - Local on-device AI inference
-- Microphone permission handling
+
+### Gallery Curator
+- **Artwork Gallery** — Browse up to 20 artworks in a full-screen grid
+- **Push-to-Talk** — Ask questions about any artwork via voice
+- **Autoplay Tour** — AI automatically narrates each artwork sequentially
+- **Offline Operation** — No network required, fully on-device
+- **Context-Aware AI** — Responses grounded in exhibit metadata
 
 ## Requirements
 
@@ -18,188 +24,181 @@ A SwiftUI app demonstrating audio input and output with the LeapSDK for on-devic
 - XcodeGen: `brew install xcodegen`
 - Python 3.8+ (for downloading models)
 
-## Getting Started
+## Quick Start
 
-### 1. Download the LFM2.5 Audio Model
-
-Install the leap-bundle tool and download the model files:
+### 1. Download the Model
 ```bash
 pip install leap-bundle
 leap-bundle download LFM2.5-Audio-1.5B --quantization=Q8_0
 ```
 
-This downloads 4 required GGUF files:
-- `LFM2.5-Audio-1.5B-Q8_0.gguf` (main language model, ~1.2GB)
-- `mmproj-LFM2.5-Audio-1.5B-Q8_0.gguf` (audio encoder projection, ~332MB)
-- `vocoder-LFM2.5-Audio-1.5B-Q8_0.gguf` (audio decoder/waveform generator, ~280MB)
-- `tokenizer-LFM2.5-Audio-1.5B-Q8_0.gguf` (audio tokenizer, ~77MB)
+Downloads 4 GGUF files (~1.9GB total):
+- `LFM2.5-Audio-1.5B-Q8_0.gguf` — Main language model
+- `mmproj-LFM2.5-Audio-1.5B-Q8_0.gguf` — Audio encoder
+- `vocoder-LFM2.5-Audio-1.5B-Q8_0.gguf` — Audio decoder
+- `tokenizer-LFM2.5-Audio-1.5B-Q8_0.gguf` — Audio tokenizer
 
-### 2. Copy Model Files to Resources
-
-Copy all `.gguf` files to `LeapAudioDemo/Resources/`:
+### 2. Copy Model Files
 ```bash
 cp LiquidAI_LeapBundles_LFM2_5_Audio_1_5B_GGUF_Q8_0/*.gguf LeapAudioDemo/Resources/
 ```
 
-### 3. Setup the Project
+### 3. Setup & Run
 ```bash
-make setup
+make setup    # Generate Xcode project
+make open     # Open in Xcode
+# Press Cmd+R to build and run
 ```
-
-### 4. Open in Xcode
-```bash
-make open
-```
-
-### 5. Build and Run
-- Select an iOS 18.0+ device (simulator or physical)
-- Press Cmd+R to build and run
-- Grant microphone permission when prompted
-
-## Usage
-
-1. Launch the app
-2. Allow microphone access when prompted
-3. Tap the record button to start audio capture
-4. Speak into the microphone
-5. Tap stop to end recording
-6. The app will process the audio and display results
-7. Tap play to hear the audio response
 
 ## Project Structure
 
 ```
 LeapAudioDemo/
-├── project.yml                      # XcodeGen configuration
-├── Makefile                        # Build automation
-├── README.md                       # This file
-└── LeapAudioDemo/                  # Source code
-    ├── AudioDemoApp.swift              # App entry point
-    ├── Views/
-    │   └── AudioDemoView.swift        # Main UI
-    ├── AudioRecorder.swift            # Audio recording
-    ├── AudioPlaybackManager.swift     # Audio playback
-    ├── AudioDemoStore.swift           # Business logic
-    ├── Assets.xcassets               # App assets
-    └── Resources/                    # Model bundles (add GGUF files here)
-        ├── LFM2.5-Audio-1.5B-Q8_0.gguf
-        ├── mmproj-LFM2.5-Audio-1.5B-Q8_0.gguf
-        ├── vocoder-LFM2.5-Audio-1.5B-Q8_0.gguf
-        └── tokenizer-LFM2.5-Audio-1.5B-Q8_0.gguf
+├── project.yml                          # XcodeGen configuration
+├── Makefile                             # Build automation
+├── README.md                            # This file
+├── Docs/
+│   ├── PRD_GALLERY_CURATOR.md          # Full technical specification
+│   └── MVP_GALLERY_CURATOR.md          # Original MVP plan
+└── LeapAudioDemo/
+    ├── AudioDemoApp.swift               # App entry point
+    ├── AudioDemoStore.swift             # Original audio demo logic
+    ├── AudioPlaybackManager.swift       # Audio playback + completion callback
+    ├── AudioRecorder.swift              # Microphone input
+    ├── AppShell/
+    │   └── Views/
+    │       ├── MainTabView.swift        # Tab navigation
+    │       └── IntroView.swift          # Intro splash screen
+    ├── Gallery/
+    │   ├── Data/
+    │   │   ├── works.json               # Artwork metadata
+    │   │   └── artist.json              # Artist profile
+    │   ├── Models/
+    │   │   ├── Artwork.swift            # Artwork data model
+    │   │   └── Artist.swift             # Artist data model
+    │   ├── Stores/
+    │   │   ├── ExhibitStore.swift       # Loads exhibit data
+    │   │   ├── CuratorAudioStore.swift  # AI conversation manager
+    │   │   └── CuratorContextBuilder.swift
+    │   └── Views/
+    │       ├── GalleryView.swift        # Artwork grid + Tour button
+    │       ├── ArtworkDetailView.swift  # Full-screen artwork view
+    │       └── CuratorChatView.swift    # Debug chat interface
+    ├── Assets.xcassets/
+    │   └── Artworks/                    # Artwork images
+    └── Resources/
+        └── *.gguf                       # Model files (add here)
 ```
 
-## Code Overview
+## Usage
+
+### Gallery Mode
+1. Launch app → Select **Gallery** tab
+2. Browse artworks in the grid
+3. Tap any artwork for full-screen view
+4. **Ask a question**: Type or tap mic button (push-to-talk)
+5. **Info overlay**: Tap ⓘ button for artwork details
+
+### Autoplay Tour
+1. Tap **▶ Tour** button in Gallery toolbar
+2. AI will narrate each artwork (2-3 sentences)
+3. Auto-advances after 2 seconds
+4. Tap pause to stop, play to resume
+5. Tap X to exit tour
+
+### Audio Demo Mode
+1. Select **Audio Demo** tab
+2. Tap record button to speak
+3. AI responds with streaming audio
+
+## Architecture
 
 ### Key Components
 
-**AudioDemoStore**: Manages LeapSDK interaction and audio processing
+| Component | Purpose |
+|-----------|---------|
+| `CuratorAudioStore` | Manages AI conversation, recording, playback |
+| `ExhibitStore` | Loads artwork/artist data from JSON |
+| `CuratorContextBuilder` | Builds context prompts for AI |
+| `AudioPlaybackManager` | Streaming audio with completion callback |
+| `ArtworkDetailView` | Full-screen artwork with interaction |
+
+### AI Configuration
+
+**System Prompt** (required for audio output):
 ```swift
-@MainActor
-class AudioDemoStore: ObservableObject {
-    @Published var isRecording = false
-    @Published var isProcessing = false
-    
-    func processAudio(_ url: URL) async {
-        // LeapSDK audio integration
-    }
-}
+"Respond with interleaved text and audio."
 ```
 
-**AudioRecorder**: Handles microphone input
+**Context Injection** (per-turn):
 ```swift
-@MainActor
-class AudioRecorder: NSObject, ObservableObject {
-    @Published var isRecording = false
-    
-    func startRecording() { }
-    func stopRecording() { }
-}
+let curatorInstructions = """
+You are the exhibition curator. Use ONLY the provided Exhibit Context.
+If the answer is not in the context, say you don't know.
+"""
 ```
 
-**AudioPlaybackManager**: Handles audio output
+**Model Options**:
 ```swift
-@MainActor
-class AudioPlaybackManager: NSObject, ObservableObject {
-    func play(url: URL) async { }
-}
+LiquidInferenceEngineOptions(
+    contextSize: 4096,  // Reduced for memory
+    nGpuLayers: 0
+)
 ```
-
-**AudioDemoView**: SwiftUI interface
-```swift
-struct AudioDemoView: View {
-    @StateObject private var store = AudioDemoStore()
-    // UI implementation
-}
-```
-
-## How it Works
-
-The app uses the LeapSDK to:
-
-1. Load a local audio AI model
-2. Capture audio from the device microphone
-3. Process audio through the model
-4. Generate audio output or text responses
-5. Playback results to the user
 
 ## Customization
 
-### Adding New Features
-- Modify `AudioDemoStore.swift` for business logic changes
-- Update `Views/AudioDemoView.swift` for UI modifications
-- Enhance `AudioRecorder.swift` for additional audio capture features
-- Extend `AudioPlaybackManager.swift` for advanced playback options
-
-### Model Configuration
-The model is configured in `AudioDemoStore.swift` with companion file paths:
-```swift
-var options = LiquidInferenceEngineOptions(
-    bundlePath: modelURL.path(),
-    contextSize: 8192,
-    nGpuLayers: 0,
-    mmProjPath: mmProjPath,
-    audioDecoderPath: vocoderPath,
-    audioTokenizerPath: audioTokenizerPath
-)
-let runner = try Leap.load(options: options)
+### Adding Artworks
+1. Add image to `Assets.xcassets/Artworks/` (e.g., `work-21.jpg`)
+2. Add entry to `Gallery/Data/works.json`:
+```json
+{
+  "id": "work-21",
+  "title": "New Artwork",
+  "summary": "Brief description for AI context",
+  "imageName": "work-21.jpg"
+}
 ```
 
-**Note**: The LFM2.5 audio engine requires a fresh conversation for each turn (audio history is not replayable). The app handles this automatically.
-
-## Permissions
-
-The app requires the following permissions:
-- **Microphone**: Required for audio input
-- **Background Modes**: Audio processing can continue in the background
-
-These are configured in `project.yml`:
-```yaml
-INFOPLIST_KEY_NSMicrophoneUsageDescription: "Audio input is used to capture prompts."
-INFOPLIST_KEY_UIBackgroundModes: "audio"
+### Changing Artist Profile
+Edit `Gallery/Data/artist.json`:
+```json
+{
+  "name": "Artist Name",
+  "mission": "Used in AI context",
+  "themes": ["theme1", "theme2"]
+}
 ```
+
+### Modifying AI Behavior
+- Edit `CuratorContextBuilder.swift` for prompt changes
+- Modify `speakAboutCurrentArtwork()` for tour narration style
+
+## Known Limitations
+
+- **Memory pressure**: Switching between Tour and push-to-talk modes may cause performance degradation. Recommend completing one mode before using the other.
+- **Audio sync**: Response text may stream slightly ahead of audio playback.
 
 ## Troubleshooting
 
-### Build Issues
+| Issue | Solution |
+|-------|----------|
+| Model loading fails | Ensure all 4 GGUF files in `Resources/` |
+| No audio output | Check system prompt is exactly as specified |
+| Images not showing | Verify `imageName` matches file in Assets |
+| Laggy after Tour | Restart app to clear memory |
+
 ```bash
+# Reset project
 make clean
 make setup
 ```
 
-### XcodeGen not found
-```bash
-brew install xcodegen
-```
+## Documentation
 
-### Model Loading Errors
-Ensure the model file exists in `LeapAudioDemo/Resources/`
+- **[PRD_GALLERY_CURATOR.md](Docs/PRD_GALLERY_CURATOR.md)** — Complete technical specification for rebuilding the app
+- **[MVP_GALLERY_CURATOR.md](Docs/MVP_GALLERY_CURATOR.md)** — Original MVP build plan
 
-### Permission Denied
-Ensure microphone permissions are granted in Settings > Privacy > Microphone
+## License
 
-## Next Steps
-
-- Try the [LeapChatExample](../LeapChatExample/) for text-based interaction
-- Explore the [LeapSloganExample](../LeapSloganExample/) for simpler integration
-- Review the [LeapSDK documentation](https://leap.liquid.ai/docs/ios-quick-start-guide)
-- Experiment with different audio models
+See repository root for license information.
