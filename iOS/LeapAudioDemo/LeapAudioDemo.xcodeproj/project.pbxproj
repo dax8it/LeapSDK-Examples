@@ -15,6 +15,7 @@
 		782645AA45321AF1158C0B75 /* AudioPlaybackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */; };
 		D488582DA22FA4FEAC48CC0D /* AudioDemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53ECF28854F137D471134B12 /* AudioDemoStore.swift */; };
 		DDF57D7E32B15A87EB77CEEA /* LeapModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = 0C96DE1B168FC86D42742A1D /* LeapModelDownloader */; };
+		F3C9C4F42F15CE4F008A4222 /* pari_rotate.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F3C9C4F32F15CE4F008A4222 /* pari_rotate.mp4 */; };
 		GA001AAA11111111AAAAAAAA /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA001AAA11111111BBBBBBBB /* Artist.swift */; };
 		GA002AAA22222222AAAAAAAA /* Artwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA002AAA22222222BBBBBBBB /* Artwork.swift */; };
 		GA003AAA33333333AAAAAAAA /* ExhibitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA003AAA33333333BBBBBBBB /* ExhibitStore.swift */; };
@@ -37,6 +38,7 @@
 		53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LeapAudioDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlaybackManager.swift; sourceTree = "<group>"; };
 		D8B333E3DE9AD29A8F7F3E7E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F3C9C4F32F15CE4F008A4222 /* pari_rotate.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = pari_rotate.mp4; sourceTree = "<group>"; };
 		GA001AAA11111111BBBBBBBB /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
 		GA002AAA22222222BBBBBBBB /* Artwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artwork.swift; sourceTree = "<group>"; };
 		GA003AAA33333333BBBBBBBB /* ExhibitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitStore.swift; sourceTree = "<group>"; };
@@ -103,6 +105,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		F3C9C4F22F15CE03008A4222 /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				F3C9C4F32F15CE4F008A4222 /* pari_rotate.mp4 */,
+			);
+			path = Assets;
+			sourceTree = "<group>";
+		};
 		GAGRP001GALLERYGRPAAAAAAA /* Gallery */ = {
 			isa = PBXGroup;
 			children = (
@@ -117,6 +127,7 @@
 		GAGRP002APPSHELLGRPAAAAA /* AppShell */ = {
 			isa = PBXGroup;
 			children = (
+				F3C9C4F22F15CE03008A4222 /* Assets */,
 				GAGRP007APPSHELLVIEWSAAA /* Views */,
 			);
 			path = AppShell;
@@ -229,6 +240,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F3C9C4F42F15CE4F008A4222 /* pari_rotate.mp4 in Resources */,
 				50893BA122E0D5C5D8893C9A /* Assets.xcassets in Resources */,
 				GA011AAABBBBBBBBAAAAAAAA /* artist.json in Resources */,
 				GA012AAACCCCCCCCAAAAAAAA /* works.json in Resources */,
