@@ -40,11 +40,14 @@ final class CuratorAudioStore {
     private var modelRunner: ModelRunner?
     private var streamingTask: Task<Void, Never>?
     
+    private var generationComplete = false
+    
     init() {
         playbackManager.prepareSession()
         playbackManager.onPlaybackComplete = { [weak self] in
             Task { @MainActor in
-                self?.onAudioPlaybackComplete?()
+                guard let self, self.generationComplete else { return }
+                self.onAudioPlaybackComplete?()
             }
         }
     }
@@ -273,6 +276,7 @@ final class CuratorAudioStore {
         streamingText = ""
         status = "Thinking..."
         isGenerating = true
+        generationComplete = false
         
         let stream = freshConversation.generateResponse(message: message)
         
@@ -330,6 +334,7 @@ final class CuratorAudioStore {
         )
         streamingText = ""
         isGenerating = false
+        generationComplete = true
         status = audioData != nil ? "Response complete." : finishReasonDescription(completion.finishReason)
         trimHistoryIfNeeded()
     }
