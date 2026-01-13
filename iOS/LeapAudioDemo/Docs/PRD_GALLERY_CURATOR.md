@@ -440,9 +440,176 @@ make open
 
 ---
 
-## 13. Version History
+## 13. Future: Magazine Capabilities (TODO)
+
+> **Status**: Planned feature to transform the app into a multi-editorial fashion magazine experience.
+
+### 13.1 Use Case
+
+A fashion magazine app containing multiple photo editorials (8-10 images each). Users browse editorial covers, select one to view, and interact with the AI curator who provides context specific to that editorial's theme.
+
+### 13.2 Proposed Folder Structure
+
+```
+LeapAudioDemo/
+├── Assets.xcassets/
+│   └── Editorials/                      # All editorial images
+│       ├── urban-shadows/               # Editorial 1 folder
+│       │   ├── cover.jpg                # Editorial cover image
+│       │   ├── work-01.jpg
+│       │   ├── work-02.jpg
+│       │   └── ... (8-10 images)
+│       ├── light-paintings/             # Editorial 2 folder
+│       │   ├── cover.jpg
+│       │   ├── work-01.jpg
+│       │   └── ...
+│       └── rooftop-sessions/            # Editorial 3 folder
+│           ├── cover.jpg
+│           └── ...
+└── Gallery/
+    └── Data/
+        ├── artist.json                  # Shared artist profile
+        ├── editorials.json              # Master list of editorials
+        └── editorials/                  # Individual editorial data
+            ├── urban-shadows.json
+            ├── light-paintings.json
+            └── rooftop-sessions.json
+```
+
+### 13.3 Data Models
+
+**Editorial Model** (`Editorial.swift`):
+```swift
+struct Editorial: Codable, Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let coverImage: String           // References Assets folder
+    let description: String          // Theme for AI context
+    let photographer: String?        // Optional, defaults to artist
+    let location: String?
+    let season: String?              // e.g., "Fall 2024"
+    let tags: [String]
+}
+```
+
+**Editorials Index** (`editorials.json`):
+```json
+[
+  {
+    "id": "urban-shadows",
+    "title": "Urban Shadows",
+    "subtitle": "NYC Street Fashion",
+    "coverImage": "urban-shadows/cover",
+    "description": "Gritty black-and-white street fashion photography exploring the intersection of haute couture and raw urban texture.",
+    "location": "New York City",
+    "season": "Fall 2024",
+    "tags": ["street", "black-and-white", "editorial", "NYC"]
+  },
+  {
+    "id": "light-paintings",
+    "title": "Light Paintings",
+    "subtitle": "Ethereal Studio Series",
+    "coverImage": "light-paintings/cover",
+    "description": "Experimental long-exposure techniques creating dreamlike fashion imagery through controlled light manipulation.",
+    "location": "Studio",
+    "season": "Spring 2025",
+    "tags": ["experimental", "light-painting", "studio", "color"]
+  }
+]
+```
+
+**Editorial Works** (`editorials/urban-shadows.json`):
+```json
+[
+  {
+    "id": "us-01",
+    "title": "Concrete Canyon",
+    "summary": "Model framed between towering buildings...",
+    "imageName": "urban-shadows/work-01",
+    "tags": ["architecture", "contrast"]
+  }
+]
+```
+
+### 13.4 New Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `Editorial.swift` | `Gallery/Models/` | Editorial data model |
+| `MagazineStore.swift` | `Gallery/Stores/` | Loads editorials index |
+| `MagazineHomeView.swift` | `Gallery/Views/` | Grid of editorial covers |
+| `EditorialDetailView.swift` | `Gallery/Views/` | Gallery view for single editorial |
+
+### 13.5 Navigation Flow
+
+```
+MagazineHomeView
+    ├── Editorial cover grid (2 columns)
+    ├── Tap editorial → fullScreenCover
+    │
+    └── EditorialDetailView
+            ├── Editorial header (title, subtitle, description)
+            ├── Artwork grid (existing GalleryView logic)
+            ├── Tour button for this editorial
+            │
+            └── ArtworkDetailView (existing, unchanged)
+                    ├── Full-screen image
+                    ├── AI push-to-talk
+                    └── Autoplay tour
+```
+
+### 13.6 Context Builder Changes
+
+Modify `CuratorContextBuilder` to include editorial context:
+
+```swift
+static func buildContextPacket(
+    artist: Artist?,
+    editorial: Editorial?,
+    artwork: Artwork?
+) -> String {
+    var lines: [String] = ["[Exhibit Context]"]
+    
+    if let editorial = editorial {
+        lines.append("[Editorial: \(editorial.title)]")
+        lines.append("Theme: \(editorial.description)")
+        if let season = editorial.season {
+            lines.append("Season: \(season)")
+        }
+    }
+    
+    // ... existing artist/artwork context
+}
+```
+
+### 13.7 Implementation Steps
+
+1. **Create Editorial model** - New `Editorial.swift`
+2. **Create editorials.json** - Index of all editorials
+3. **Migrate existing works** - Move current works.json into first editorial
+4. **Create MagazineStore** - Load editorials index
+5. **Create MagazineHomeView** - Editorial cover grid
+6. **Modify ExhibitStore** - Accept editorial ID, load specific works
+7. **Update RootTabView** - Replace Gallery with Magazine home
+8. **Update CuratorContextBuilder** - Include editorial theme
+9. **Test autoplay** - Verify tour works within single editorial
+10. **Add editorial assets** - Organize images into folders
+
+### 13.8 Asset Organization Convention
+
+- **Cover images**: `{editorial-id}/cover.jpg` (16:9 or 3:4 ratio)
+- **Work images**: `{editorial-id}/work-{nn}.jpg` (portrait preferred)
+- **Naming**: Use kebab-case for editorial IDs (`urban-shadows`, not `urbanShadows`)
+- **Image sets**: Use 2x/3x variants in asset catalog for retina displays
+
+---
+
+## 14. Version History
 
 | Date | Version | Changes |
 |------|---------|---------|
 | Jan 12, 2026 | 1.0 | Initial Gallery Curator with autoplay tour |
+| Jan 12, 2026 | 1.1 | Fix autoplay premature skip bug |
+| Jan 12, 2026 | — | Added Magazine Capabilities roadmap (TODO) |
 
