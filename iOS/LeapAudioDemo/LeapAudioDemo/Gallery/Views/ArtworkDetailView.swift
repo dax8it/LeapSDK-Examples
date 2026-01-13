@@ -127,26 +127,35 @@ struct ArtworkDetailView: View {
     }
     
     private func startAutoplayTour() {
+        print("[ArtworkDetailView] 🎬 Starting autoplay tour")
         isAutoplayActive = true
         autoplayPaused = false
         showResponseOverlay = true
-        store.speakAboutCurrentArtwork()
+        Task {
+            await store.startAutoTourMode()
+            store.speakAboutCurrentArtwork()
+        }
     }
     
     private func toggleAutoplayPause() {
         if autoplayPaused {
+            print("[ArtworkDetailView] ▶️ Resuming autoplay")
             autoplayPaused = false
             store.speakAboutCurrentArtwork()
         } else {
+            print("[ArtworkDetailView] ⏸️ Pausing autoplay")
             autoplayPaused = true
             store.stopPlayback()
         }
     }
     
     private func stopAutoplay() {
+        print("[ArtworkDetailView] 🛑 Stopping autoplay")
         isAutoplayActive = false
         autoplayPaused = false
-        store.stopPlayback()
+        Task {
+            await store.hardReset()
+        }
     }
     
     private func advanceToNextArtwork() {

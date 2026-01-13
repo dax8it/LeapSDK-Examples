@@ -34,25 +34,38 @@ final class CuratorAudioStore {
     private var currentArtwork: Artwork?
     private var currentArtworks: [Artwork] = []
     
-    private let playbackManager = AudioPlaybackManager()
-    private let recorder = AudioRecorder()
-    private var conversation: Conversation?
-    private var modelRunner: ModelRunner?
-    private var streamingTask: Task<Void, Never>?
-    
-    private var generationComplete = false
+    private let runtime = CuratorRuntime.shared
     
     init() {
-        playbackManager.prepareSession()
-        playbackManager.onPlaybackComplete = { [weak self] in
-            Task { @MainActor in
-                guard let self, self.generationComplete else { return }
-                self.onAudioPlaybackComplete?()
-            }
+        print("[CuratorAudioStore] 🏗️ Initializing (using shared CuratorRuntime)")
+        setupRuntimeCallbacks()
+    }
+    
+    private func setupRuntimeCallbacks() {
+        runtime.onStreamingText = { [weak self] text in
+            self?.streamingText.append(text)
+        }
+        
+        runtime.onStatusChange = { [weak self] status in
+            self?.status = status
+        }
+        
+        runtime.onGenerationComplete = { [weak self] completion in
+            self?.handleGenerationComplete(completion)
+        }
+        
+        runtime.onGenerationError = { [weak self] error in
+            self?.handleGenerationError(error)
+        }
+        
+        runtime.onPlaybackComplete = { [weak self] in
+            print("[CuratorAudioStore] 🔊 Playback complete, triggering callback")
+            self?.onAudioPlaybackComplete?()
         }
     }
     
     func speakAboutCurrentArtwork() {
+        print("[CuratorAudioStore] 🎬 speakAboutCurrentArtwork()")
         clearHistoryForAutoplay()
         let prompt = "Tell me about this artwork in 2-3 sentences."
         sendTextPrompt(prompt)
@@ -74,7 +87,6 @@ final class CuratorAudioStore {
     
     func clearHistory() {
         messages.removeAll()
-        conversation = nil
         streamingText = ""
         lastPromptDebug = ""
         print("[CuratorAudioStore] History cleared")
@@ -83,7 +95,6 @@ final class CuratorAudioStore {
     private func clearHistoryForAutoplay() {
         if messages.count > 4 {
             messages.removeAll()
-            conversation = nil
             print("[CuratorAudioStore] Autoplay history cleared to free memory")
         }
     }
@@ -105,44 +116,20 @@ final class CuratorAudioStore {
     }
     
     func setupModel() async {
-        await loadModel()
-    }
-    
-    private func loadModel() async {
-        guard modelRunner == nil else { return }
-        isModelLoading = true
-        let quant = "Q8_0"
-        status = "Loading model..."
-        
-        guard let modelURL = findModelURL(quantization: quant) else {
-            status = "No model found. Add model files first."
-            isModelLoading = false
+        guard !runtime.isModelLoaded else {
+            print("[CuratorAudioStore] Model already loaded via runtime")
+            messages.append(
+                CuratorMessage(role: .assistant, text: "Curator ready. Ask me about the exhibition.", audioData: nil)
+            )
+            status = "Ready"
             return
         }
         
+        isModelLoading = true
+        status = "Loading model..."
+        
         do {
-            let bundle = Bundle.main
-            let mmProjPath = bundle.url(forResource: "mmproj-LFM2.5-Audio-1.5B-\(quant)", withExtension: "gguf")?.path()
-            let audioTokenizerPath = bundle.url(forResource: "tokenizer-LFM2.5-Audio-1.5B-\(quant)", withExtension: "gguf")?.path()
-            let vocoderPath = bundle.url(forResource: "vocoder-LFM2.5-Audio-1.5B-\(quant)", withExtension: "gguf")?.path()
-            
-            print("[CuratorAudioStore] Loading model:")
-            print("  modelURL: \(modelURL.path())")
-            print("  mmProjPath: \(mmProjPath ?? "nil")")
-            print("  audioTokenizerPath: \(audioTokenizerPath ?? "nil")")
-            print("  vocoderPath: \(vocoderPath ?? "nil")")
-            
-            let options = LiquidInferenceEngineOptions(
-                bundlePath: modelURL.path(),
-                contextSize: 4096,
-                nGpuLayers: 0,
-                mmProjPath: mmProjPath,
-                audioDecoderPath: vocoderPath,
-                audioTokenizerPath: audioTokenizerPath
-            )
-            let runner = try Leap.load(options: options)
-            modelRunner = runner
-            print("[CuratorAudioStore] Model loaded successfully")
+            try await runtime.loadModel()
             messages.append(
                 CuratorMessage(role: .assistant, text: "Curator ready. Ask me about the exhibition.", audioData: nil)
             )
@@ -153,6 +140,25 @@ final class CuratorAudioStore {
         }
         
         isModelLoading = false
+    }
+    
+    func startAutoTourMode() async {
+        print("[CuratorAudioStore] 🎬 Starting Auto Tour mode")
+        await runtime.startAutoTour()
+    }
+    
+    func startPushToTalkMode() async {
+        print("[CuratorAudioStore] 🎤 Starting Push-to-Talk mode")
+        await runtime.startPushToTalk()
+    }
+    
+    func hardReset() async {
+        print("[CuratorAudioStore] 🔄 Requesting hard reset")
+        await runtime.hardReset()
+        isGenerating = false
+        isRecording = false
+        streamingText = ""
+        status = "Ready"
     }
     
     func sendTextPrompt() {
@@ -171,17 +177,24 @@ final class CuratorAudioStore {
         let fullText = "\(instructions)\n\n\(contextPacket)\n\nUser question: \(trimmed)"
         
         lastPromptDebug = "INSTRUCTIONS:\n\(instructions)\n\nCONTEXT:\n\(contextPacket)\n\nQUERY:\n\(trimmed)"
-        print("[CuratorAudioStore] Text prompt with context (\(fullText.count) chars)")
+        print("[CuratorAudioStore] 📝 Text prompt with context (\(fullText.count) chars)")
         
         let message = ChatMessage(role: .user, content: [.text(fullText)])
-        appendUserMessage(text: trimmed, audioData: nil)
-        streamResponse(for: message)
+        appendUserMessage(text: trimmed)
+        
+        streamingText = ""
+        isGenerating = true
+        
+        Task {
+            await runtime.generate(message: message, systemPrompt: CuratorContextBuilder.systemPrompt)
+        }
     }
     
     func stopPlayback() {
-        streamingTask?.cancel()
-        streamingTask = nil
-        playbackManager.reset()
+        print("[CuratorAudioStore] 🛑 stopPlayback()")
+        Task {
+            await runtime.hardReset()
+        }
         isGenerating = false
         status = "Ready"
         trimHistoryIfNeeded()
@@ -189,16 +202,17 @@ final class CuratorAudioStore {
     
     func toggleRecording() {
         if isRecording {
-            recorder.stop()
+            print("[CuratorAudioStore] 🎤 Stopping recording")
             isRecording = false
-            guard let capture = recorder.capture() else {
+            guard let capture = runtime.stopRecordingAndCapture() else {
                 status = "No audio captured."
                 return
             }
             sendAudioPrompt(samples: capture.samples, sampleRate: capture.sampleRate)
         } else {
+            print("[CuratorAudioStore] 🎤 Starting recording")
             do {
-                try recorder.start()
+                try runtime.startRecording()
                 isRecording = true
                 status = "Recording..."
             } catch {
@@ -208,13 +222,14 @@ final class CuratorAudioStore {
     }
     
     func cancelRecording() {
-        recorder.cancel()
+        print("[CuratorAudioStore] 🎤 Cancelling recording")
+        runtime.cancelRecording()
         isRecording = false
         status = "Recording cancelled."
     }
     
     func playAudio(_ data: Data) {
-        playbackManager.play(wavData: data)
+        print("[CuratorAudioStore] 🔊 Playing audio data")
     }
     
     private func sendAudioPrompt(samples: [Float], sampleRate: Int) {
@@ -233,92 +248,28 @@ final class CuratorAudioStore {
         let chatMessage = ChatMessage(role: .user, content: [textContent, audioContent])
         
         lastPromptDebug = "INSTRUCTIONS:\n\(instructions)\n\nCONTEXT (voice):\n\(contextPacket)\n\n[AUDIO INPUT]"
-        print("[CuratorAudioStore] Audio prompt with context (\(fullContext.count) chars text + audio)")
+        print("[CuratorAudioStore] 🎙️ Audio prompt with context (\(fullContext.count) chars text + audio)")
         
         var display = "Voice question"
         if samples.count < sampleRate / 4 {
             display = "Voice question (brief)"
         }
         
-        let audioData: Data?
-        if case .audio(let data) = audioContent {
-            audioData = data
-        } else {
-            audioData = nil
-        }
+        appendUserMessage(text: display)
         
-        appendUserMessage(text: display, audioData: audioData)
-        streamResponse(for: chatMessage)
+        streamingText = ""
+        isGenerating = true
+        
+        Task {
+            await runtime.generate(message: chatMessage, systemPrompt: CuratorContextBuilder.systemPrompt)
+        }
     }
     
-    private func appendUserMessage(text: String, audioData: Data?) {
+    private func appendUserMessage(text: String) {
         messages.append(CuratorMessage(role: .user, text: text, audioData: nil))
     }
     
-    private func streamResponse(for message: ChatMessage) {
-        guard let modelRunner else {
-            status = "Model not ready yet."
-            return
-        }
-        
-        let sysPrompt = CuratorContextBuilder.systemPrompt
-        print("[CuratorAudioStore] Starting response generation")
-        print("[CuratorAudioStore] System prompt: \(sysPrompt)")
-        
-        let freshConversation = Conversation(
-            modelRunner: modelRunner,
-            history: [ChatMessage(role: .system, content: [.text(sysPrompt)])]
-        )
-        conversation = freshConversation
-        
-        playbackManager.reset()
-        streamingTask?.cancel()
-        streamingText = ""
-        status = "Thinking..."
-        isGenerating = true
-        generationComplete = false
-        
-        let stream = freshConversation.generateResponse(message: message)
-        
-        streamingTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                for try await event in stream {
-                    if Task.isCancelled { break }
-                    await MainActor.run {
-                        self.handle(event)
-                    }
-                }
-                print("[CuratorAudioStore] Response generation completed")
-            } catch {
-                print("[CuratorAudioStore] Generation error: \(error)")
-                await MainActor.run {
-                    self.handleGenerationError(error)
-                }
-            }
-            await MainActor.run {
-                self.streamingTask = nil
-            }
-        }
-    }
-    
-    private func handle(_ event: MessageResponse) {
-        switch event {
-        case .chunk(let text):
-            streamingText.append(text)
-        case .reasoningChunk:
-            status = "Thinking..."
-        case .audioSample(let samples, let sampleRate):
-            playbackManager.enqueue(samples: samples, sampleRate: sampleRate)
-            status = "Speaking..."
-        case .functionCall(let calls):
-            status = "Function call: \(calls.count)"
-        case .complete(let completion):
-            finish(with: completion)
-        }
-    }
-    
-    private func finish(with completion: MessageCompletion) {
+    private func handleGenerationComplete(_ completion: MessageCompletion) {
         let text = completion.message.content.compactMap { content -> String? in
             if case .text(let value) = content { return value }
             return nil
@@ -334,35 +285,28 @@ final class CuratorAudioStore {
         )
         streamingText = ""
         isGenerating = false
-        generationComplete = true
-        status = audioData != nil ? "Response complete." : finishReasonDescription(completion.finishReason)
+        status = audioData != nil ? "Response complete." : "Ready"
         trimHistoryIfNeeded()
+        print("[CuratorAudioStore] ✅ Generation complete, message added")
     }
     
     private func handleGenerationError(_ error: Error) {
         isGenerating = false
         streamingText = ""
         status = "Error: \(error.localizedDescription)"
+        print("[CuratorAudioStore] ❌ Generation error: \(error)")
     }
     
-    private func finishReasonDescription(_ reason: GenerationFinishReason) -> String {
-        switch reason {
-        case .stop: return "Ready"
-        case .exceed_context: return "Context limit reached."
-        }
-    }
-    
-    private func findModelURL(quantization: String) -> URL? {
-        let bundle = Bundle.main
-        let modelName = "LFM2.5-Audio-1.5B-\(quantization)"
+    func debugStatus() -> String {
+        """
+        [CuratorAudioStore]
+        messages: \(messages.count)
+        isGenerating: \(isGenerating)
+        isRecording: \(isRecording)
+        status: \(status ?? "nil")
         
-        if let url = bundle.url(forResource: modelName, withExtension: "gguf") {
-            return url
-        }
-        if let url = bundle.url(forResource: modelName, withExtension: "gguf", subdirectory: "Resources") {
-            return url
-        }
-        return nil
+        \(runtime.debugStatus())
+        """
     }
 }
 

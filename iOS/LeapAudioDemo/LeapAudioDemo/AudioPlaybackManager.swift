@@ -9,10 +9,12 @@ final class AudioPlaybackManager {
   private var sessionConfigured = false
   private var pendingBuffers = 0
   private var isPlaybackActive = false
+  private var totalBuffersEnqueued = 0
   
   var onPlaybackComplete: (() -> Void)?
 
   init() {
+    print("[AudioPlaybackManager] 🔊 Initializing")
     engine.attach(player)
     engine.connect(player, to: engine.mainMixerNode, format: nil)
   }
@@ -48,7 +50,13 @@ final class AudioPlaybackManager {
       }
 
       self.pendingBuffers += 1
+      self.totalBuffersEnqueued += 1
       self.isPlaybackActive = true
+      
+      if self.totalBuffersEnqueued == 1 {
+        print("[AudioPlaybackManager] 🔊 === PLAYBACK START === (first buffer)")
+      }
+      
       self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
         self?.queue.async {
           self?.pendingBuffers -= 1
@@ -65,7 +73,9 @@ final class AudioPlaybackManager {
     queue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
       guard let self else { return }
       if self.pendingBuffers == 0 && self.isPlaybackActive {
+        print("[AudioPlaybackManager] 🔊 === PLAYBACK COMPLETE === (total buffers: \(self.totalBuffersEnqueued))")
         self.isPlaybackActive = false
+        self.totalBuffersEnqueued = 0
         DispatchQueue.main.async {
           self.onPlaybackComplete?()
         }
@@ -106,11 +116,13 @@ final class AudioPlaybackManager {
 
   func reset() {
     queue.async {
+      print("[AudioPlaybackManager] 🔇 === RESET === (pending: \(self.pendingBuffers), total: \(self.totalBuffersEnqueued))")
       self.player.stop()
       self.player.reset()
       self.format = nil
       self.pendingBuffers = 0
       self.isPlaybackActive = false
+      self.totalBuffersEnqueued = 0
     }
   }
 
