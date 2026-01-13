@@ -8,6 +8,8 @@ struct ArtworkDetailView: View {
     @State private var currentIndex: Int
     @State private var store = CuratorAudioStore()
     @State private var showSummaryOverlay = false
+    @State private var showResponseOverlay = false
+    @State private var lastResponseText = ""
     
     init(artworks: [Artwork], initialIndex: Int, artist: Artist?) {
         self.artworks = artworks
@@ -28,6 +30,10 @@ struct ArtworkDetailView: View {
                 VStack(spacing: 0) {
                     navigationArrows
                     Spacer()
+                    
+                    if showResponseOverlay || store.isGenerating || store.status == "Speaking..." {
+                        responseOverlay
+                    }
                     
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -55,10 +61,10 @@ struct ArtworkDetailView: View {
                             .padding(.trailing, 16)
                         }
                     }
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 16)
                     
                     inputSection
-                        .padding(.top, 16)
+                        .padding(.top, 24)
                 }
                 
                 if showSummaryOverlay {
@@ -94,6 +100,16 @@ struct ArtworkDetailView: View {
         }
         .onChange(of: currentIndex) { _, _ in
             updateContext()
+        }
+        .onChange(of: store.isGenerating) { _, isGenerating in
+            if isGenerating {
+                showResponseOverlay = true
+            }
+        }
+        .onChange(of: store.streamingText) { _, newText in
+            if !newText.isEmpty {
+                lastResponseText = newText
+            }
         }
     }
     
@@ -215,6 +231,64 @@ struct ArtworkDetailView: View {
                     .background(Color.black.opacity(0.5))
             }
         }
+    }
+    
+    private var responseOverlay: some View {
+        let textSource = store.streamingText.isEmpty ? lastResponseText : store.streamingText
+        let cleanedText = textSource
+            .replacingOccurrences(of: "<|text_end|>", with: "")
+            .replacingOccurrences(of: "<|text_start|>", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showResponseOverlay = false
+                        lastResponseText = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white.opacity(0.8))
+                        .frame(width: 24, height: 24)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Circle())
+                }
+                .padding(.trailing, 12)
+                .padding(.top, 8)
+            }
+            
+            if cleanedText.isEmpty && (store.isGenerating || store.status == "Speaking...") {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                    Text(store.status == "Speaking..." ? "Speaking..." : "Thinking...")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            } else if !cleanedText.isEmpty {
+                ScrollView {
+                    Text(cleanedText)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 120)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(Color.black.opacity(0.7))
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
+        .animation(.easeInOut(duration: 0.2), value: store.streamingText)
     }
     
     private var summaryOverlay: some View {

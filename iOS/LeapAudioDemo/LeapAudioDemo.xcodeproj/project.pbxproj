@@ -304,7 +304,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = WH7Z9N74X5;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = ChitterChatter;
+				INFOPLIST_KEY_CFBundleDisplayName = "AgentX-Gallery";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input is used to capture prompts.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -391,7 +391,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = WH7Z9N74X5;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = ChitterChatter;
+				INFOPLIST_KEY_CFBundleDisplayName = "AgentX-Gallery";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input is used to capture prompts.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
