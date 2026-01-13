@@ -210,6 +210,9 @@ struct ArtworkDetailView: View {
             HStack {
                 Spacer()
                 Button {
+                    Task {
+                        await store.hardReset()
+                    }
                     dismiss()
                 } label: {
                     Image(systemName: "xmark")

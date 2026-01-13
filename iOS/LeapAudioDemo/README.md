@@ -78,7 +78,8 @@ LeapAudioDemo/
     │   │   └── Artist.swift             # Artist data model
     │   ├── Stores/
     │   │   ├── ExhibitStore.swift       # Loads exhibit data
-    │   │   ├── CuratorAudioStore.swift  # AI conversation manager
+    │   │   ├── CuratorRuntime.swift     # Singleton: model, audio session, inference queue
+    │   │   ├── CuratorAudioStore.swift  # AI conversation controller
     │   │   └── CuratorContextBuilder.swift
     │   └── Views/
     │       ├── GalleryView.swift        # Artwork grid + Tour button
@@ -117,7 +118,8 @@ LeapAudioDemo/
 
 | Component | Purpose |
 |-----------|---------|
-| `CuratorAudioStore` | Manages AI conversation, recording, playback |
+| `CuratorRuntime` | Singleton managing model, audio session, serial inference queue |
+| `CuratorAudioStore` | Thin controller for AI conversation using CuratorRuntime |
 | `ExhibitStore` | Loads artwork/artist data from JSON |
 | `CuratorContextBuilder` | Builds context prompts for AI |
 | `AudioPlaybackManager` | Streaming audio with completion callback |
@@ -176,7 +178,6 @@ Edit `Gallery/Data/artist.json`:
 
 ## Known Limitations
 
-- **Memory pressure**: Switching between Tour and push-to-talk modes may cause performance degradation. Recommend completing one mode before using the other.
 - **Audio sync**: Response text may stream slightly ahead of audio playback.
 
 ## Troubleshooting
@@ -186,7 +187,6 @@ Edit `Gallery/Data/artist.json`:
 | Model loading fails | Ensure all 4 GGUF files in `Resources/` |
 | No audio output | Check system prompt is exactly as specified |
 | Images not showing | Verify `imageName` matches file in Assets |
-| Laggy after Tour | Restart app to clear memory |
 
 ```bash
 # Reset project

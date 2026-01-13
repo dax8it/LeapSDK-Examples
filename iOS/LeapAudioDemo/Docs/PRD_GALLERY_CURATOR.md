@@ -77,7 +77,8 @@ LeapAudioDemo/
     │   │   └── Artist.swift             # Artist data model
     │   ├── Stores/
     │   │   ├── ExhibitStore.swift       # Loads exhibit data from JSON
-    │   │   ├── CuratorAudioStore.swift  # AI conversation + audio management
+    │   │   ├── CuratorRuntime.swift     # Singleton: model, audio session, inference queue
+    │   │   ├── CuratorAudioStore.swift  # Thin controller using CuratorRuntime
     │   │   └── CuratorContextBuilder.swift # Builds context prompts
     │   └── Views/
     │       ├── GalleryView.swift        # Grid of artwork thumbnails + Tour button
@@ -434,7 +435,6 @@ make open
 |-------|----------|
 | Model loading fails | Ensure all 4 GGUF files in Resources/ |
 | No audio output | Check system prompt is exactly `"Respond with interleaved text and audio."` |
-| Memory pressure | Restart app between Tour and push-to-talk modes |
 | Laggy responses | Clear history, reduce context size |
 | Images not loading | Check imageName matches filename in Assets |
 
@@ -612,4 +612,6 @@ static func buildContextPacket(
 | Jan 12, 2026 | 1.0 | Initial Gallery Curator with autoplay tour |
 | Jan 12, 2026 | 1.1 | Fix autoplay premature skip bug |
 | Jan 12, 2026 | — | Added Magazine Capabilities roadmap (TODO) |
+| Jan 13, 2026 | 1.2 | Add CuratorRuntime singleton for shared resource management |
+| Jan 13, 2026 | 1.2.1 | Fix X button to stop audio stream on dismiss |
 

@@ -7,6 +7,20 @@ options:
     iOS: "18.0"
   developmentLanguage: en
 
+schemes:
+  LeapAudioDemo:
+    build:
+      targets:
+        LeapAudioDemo: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
 configs:
   Debug: debug
   Release: release
