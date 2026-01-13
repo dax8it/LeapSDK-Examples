@@ -3,6 +3,7 @@ import SwiftUI
 struct GalleryView: View {
     let exhibitStore: ExhibitStore
     @State private var selectedIndex: Int?
+    @State private var startAutoplay = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 2),
@@ -21,6 +22,7 @@ struct GalleryView: View {
                         ForEach(Array(exhibitStore.artworks.enumerated()), id: \.element.id) { index, artwork in
                             ArtworkThumbnail(artwork: artwork)
                                 .onTapGesture {
+                                    startAutoplay = false
                                     selectedIndex = index
                                 }
                         }
@@ -29,14 +31,34 @@ struct GalleryView: View {
             }
             .navigationTitle(exhibitStore.artist?.name ?? "Gallery")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        startAutoplay = true
+                        selectedIndex = 0
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.fill")
+                            Text("Tour")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    }
+                    .disabled(exhibitStore.artworks.isEmpty)
+                }
+            }
             .fullScreenCover(item: Binding(
-                get: { selectedIndex.map { IndexWrapper(index: $0) } },
-                set: { selectedIndex = $0?.index }
+                get: { selectedIndex.map { IndexWrapper(index: $0, autoplay: startAutoplay) } },
+                set: { 
+                    selectedIndex = $0?.index
+                    startAutoplay = false
+                }
             )) { wrapper in
                 ArtworkDetailView(
                     artworks: exhibitStore.artworks,
                     initialIndex: wrapper.index,
-                    artist: exhibitStore.artist
+                    artist: exhibitStore.artist,
+                    startAutoplay: wrapper.autoplay
                 )
             }
         }
@@ -45,7 +67,13 @@ struct GalleryView: View {
 
 struct IndexWrapper: Identifiable {
     let index: Int
+    let autoplay: Bool
     var id: Int { index }
+    
+    init(index: Int, autoplay: Bool = false) {
+        self.index = index
+        self.autoplay = autoplay
+    }
 }
 
 struct ArtworkThumbnail: View {

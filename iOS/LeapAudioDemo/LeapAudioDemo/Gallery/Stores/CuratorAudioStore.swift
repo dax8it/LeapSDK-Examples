@@ -28,6 +28,7 @@ final class CuratorAudioStore {
     var isRecording = false
     var showDebugPrompt = false
     var lastPromptDebug: String = ""
+    var onAudioPlaybackComplete: (() -> Void)?
     
     private var currentArtist: Artist?
     private var currentArtwork: Artwork?
@@ -41,6 +42,17 @@ final class CuratorAudioStore {
     
     init() {
         playbackManager.prepareSession()
+        playbackManager.onPlaybackComplete = { [weak self] in
+            Task { @MainActor in
+                self?.onAudioPlaybackComplete?()
+            }
+        }
+    }
+    
+    func speakAboutCurrentArtwork() {
+        clearHistoryForAutoplay()
+        let prompt = "Tell me about this artwork in 2-3 sentences."
+        sendTextPrompt(prompt)
     }
     
     func setContext(artist: Artist?, artwork: Artwork?) {
@@ -55,6 +67,30 @@ final class CuratorAudioStore {
         currentArtwork = nil
         currentArtworks = artworks
         print("[CuratorAudioStore] Context set: artist=\(artist?.name ?? "nil"), artworks=\(artworks.count)")
+    }
+    
+    func clearHistory() {
+        messages.removeAll()
+        conversation = nil
+        streamingText = ""
+        lastPromptDebug = ""
+        print("[CuratorAudioStore] History cleared")
+    }
+    
+    private func clearHistoryForAutoplay() {
+        if messages.count > 4 {
+            messages.removeAll()
+            conversation = nil
+            print("[CuratorAudioStore] Autoplay history cleared to free memory")
+        }
+    }
+    
+    private func trimHistoryIfNeeded() {
+        if messages.count > 6 {
+            let keepCount = 2
+            messages = Array(messages.suffix(keepCount))
+            print("[CuratorAudioStore] Trimmed history to \(keepCount) messages")
+        }
     }
     
     private func buildContextPacket() -> String {
@@ -120,6 +156,12 @@ final class CuratorAudioStore {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         inputText = ""
+        sendTextPrompt(trimmed)
+    }
+    
+    func sendTextPrompt(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
         
         let contextPacket = buildContextPacket()
         let instructions = CuratorContextBuilder.curatorInstructions
@@ -131,6 +173,15 @@ final class CuratorAudioStore {
         let message = ChatMessage(role: .user, content: [.text(fullText)])
         appendUserMessage(text: trimmed, audioData: nil)
         streamResponse(for: message)
+    }
+    
+    func stopPlayback() {
+        streamingTask?.cancel()
+        streamingTask = nil
+        playbackManager.reset()
+        isGenerating = false
+        status = "Ready"
+        trimHistoryIfNeeded()
     }
     
     func toggleRecording() {
@@ -198,7 +249,7 @@ final class CuratorAudioStore {
     }
     
     private func appendUserMessage(text: String, audioData: Data?) {
-        messages.append(CuratorMessage(role: .user, text: text, audioData: audioData))
+        messages.append(CuratorMessage(role: .user, text: text, audioData: nil))
     }
     
     private func streamResponse(for message: ChatMessage) {
@@ -274,12 +325,13 @@ final class CuratorAudioStore {
             CuratorMessage(
                 role: .assistant,
                 text: text.isEmpty ? "(audio response)" : text,
-                audioData: audioData
+                audioData: nil
             )
         )
         streamingText = ""
         isGenerating = false
         status = audioData != nil ? "Response complete." : finishReasonDescription(completion.finishReason)
+        trimHistoryIfNeeded()
     }
     
     private func handleGenerationError(_ error: Error) {

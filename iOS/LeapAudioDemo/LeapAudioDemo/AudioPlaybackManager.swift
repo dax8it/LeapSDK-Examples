@@ -7,10 +7,18 @@ final class AudioPlaybackManager {
   private let queue = DispatchQueue(label: "ai.leap.audio.playback")
   private var format: AVAudioFormat?
   private var sessionConfigured = false
+  private var pendingBuffers = 0
+  private var isPlaybackActive = false
+  
+  var onPlaybackComplete: (() -> Void)?
 
   init() {
     engine.attach(player)
     engine.connect(player, to: engine.mainMixerNode, format: nil)
+  }
+  
+  var isPlaying: Bool {
+    return isPlaybackActive || player.isPlaying
   }
 
   func prepareSession() {
@@ -39,9 +47,28 @@ final class AudioPlaybackManager {
         }
       }
 
-      self.player.scheduleBuffer(buffer, completionHandler: nil)
+      self.pendingBuffers += 1
+      self.isPlaybackActive = true
+      self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
+        self?.queue.async {
+          self?.pendingBuffers -= 1
+          self?.checkPlaybackComplete()
+        }
+      }
       if !self.player.isPlaying {
         self.player.play()
+      }
+    }
+  }
+  
+  private func checkPlaybackComplete() {
+    queue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+      guard let self else { return }
+      if self.pendingBuffers == 0 && self.isPlaybackActive {
+        self.isPlaybackActive = false
+        DispatchQueue.main.async {
+          self.onPlaybackComplete?()
+        }
       }
     }
   }
@@ -82,6 +109,8 @@ final class AudioPlaybackManager {
       self.player.stop()
       self.player.reset()
       self.format = nil
+      self.pendingBuffers = 0
+      self.isPlaybackActive = false
     }
   }
 

@@ -4,17 +4,21 @@ struct ArtworkDetailView: View {
     let artworks: [Artwork]
     let initialIndex: Int
     let artist: Artist?
+    let startAutoplay: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var currentIndex: Int
     @State private var store = CuratorAudioStore()
     @State private var showSummaryOverlay = false
     @State private var showResponseOverlay = false
     @State private var lastResponseText = ""
+    @State private var isAutoplayActive = false
+    @State private var autoplayPaused = false
     
-    init(artworks: [Artwork], initialIndex: Int, artist: Artist?) {
+    init(artworks: [Artwork], initialIndex: Int, artist: Artist?, startAutoplay: Bool = false) {
         self.artworks = artworks
         self.initialIndex = initialIndex
         self.artist = artist
+        self.startAutoplay = startAutoplay
         self._currentIndex = State(initialValue: initialIndex)
     }
     
@@ -31,14 +35,12 @@ struct ArtworkDetailView: View {
                     navigationArrows
                     Spacer()
                     
-                    if showResponseOverlay || store.isGenerating || store.status == "Speaking..." {
-                        responseOverlay
-                    }
-                    
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading, spacing: 4) {
                             titleOverlay
-                            quoteSection
+                            if showResponseOverlay || store.isGenerating || store.status == "Speaking..." {
+                                responseOverlay
+                            }
                         }
                         
                         Spacer()
@@ -97,6 +99,10 @@ struct ArtworkDetailView: View {
         .task {
             await store.setupModel()
             updateContext()
+            setupAutoplayCallback()
+            if startAutoplay {
+                startAutoplayTour()
+            }
         }
         .onChange(of: currentIndex) { _, _ in
             updateContext()
@@ -110,6 +116,57 @@ struct ArtworkDetailView: View {
             if !newText.isEmpty {
                 lastResponseText = newText
             }
+        }
+    }
+    
+    private func setupAutoplayCallback() {
+        store.onAudioPlaybackComplete = { [self] in
+            guard isAutoplayActive && !autoplayPaused else { return }
+            advanceToNextArtwork()
+        }
+    }
+    
+    private func startAutoplayTour() {
+        isAutoplayActive = true
+        autoplayPaused = false
+        showResponseOverlay = true
+        store.speakAboutCurrentArtwork()
+    }
+    
+    private func toggleAutoplayPause() {
+        if autoplayPaused {
+            autoplayPaused = false
+            store.speakAboutCurrentArtwork()
+        } else {
+            autoplayPaused = true
+            store.stopPlayback()
+        }
+    }
+    
+    private func stopAutoplay() {
+        isAutoplayActive = false
+        autoplayPaused = false
+        store.stopPlayback()
+    }
+    
+    private func advanceToNextArtwork() {
+        if currentIndex < artworks.count - 1 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                guard isAutoplayActive && !autoplayPaused else { return }
+                showResponseOverlay = false
+                lastResponseText = ""
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    currentIndex += 1
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    if isAutoplayActive && !autoplayPaused {
+                        store.speakAboutCurrentArtwork()
+                    }
+                }
+            }
+        } else {
+            isAutoplayActive = false
+            autoplayPaused = false
         }
     }
     
@@ -179,6 +236,22 @@ struct ArtworkDetailView: View {
                 
                 Spacer()
                 
+                if isAutoplayActive {
+                    Button {
+                        toggleAutoplayPause()
+                    } label: {
+                        Image(systemName: autoplayPaused ? "play.fill" : "pause.fill")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.black.opacity(0.7))
+                            .clipShape(Circle())
+                    }
+                }
+                
+                Spacer()
+                
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         if currentIndex < artworks.count - 1 {
@@ -216,23 +289,6 @@ struct ArtworkDetailView: View {
         .padding(.bottom, 20)
     }
     
-    private var quoteSection: some View {
-        Group {
-            if let quote = currentArtwork.quote, !quote.isEmpty {
-                Text("\"\(quote)\" – AC")
-                    .font(.system(size: 16, design: .serif))
-                    .italic()
-                    .foregroundStyle(.white.opacity(0.9))
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.5))
-            }
-        }
-    }
-    
     private var responseOverlay: some View {
         let textSource = store.streamingText.isEmpty ? lastResponseText : store.streamingText
         let cleanedText = textSource
@@ -240,54 +296,55 @@ struct ArtworkDetailView: View {
             .replacingOccurrences(of: "<|text_start|>", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Spacer()
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showResponseOverlay = false
-                        lastResponseText = ""
-                    }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white.opacity(0.8))
-                        .frame(width: 24, height: 24)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(Circle())
-                }
-                .padding(.trailing, 12)
-                .padding(.top, 8)
-            }
-            
+        return HStack(alignment: .top, spacing: 8) {
             if cleanedText.isEmpty && (store.isGenerating || store.status == "Speaking...") {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ProgressView()
                         .tint(.white)
-                        .scaleEffect(0.8)
+                        .scaleEffect(0.7)
                     Text(store.status == "Speaking..." ? "Speaking..." : "Thinking...")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 14))
+                        .italic()
+                        .foregroundStyle(.white.opacity(0.9))
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
             } else if !cleanedText.isEmpty {
-                ScrollView {
-                    Text(cleanedText)
-                        .font(.system(size: 15))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        Text(cleanedText)
+                            .font(.system(size: 14))
+                            .italic()
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.leading)
+                            .id("responseText")
+                    }
+                    .frame(maxHeight: 80)
+                    .onChange(of: cleanedText) { _, _ in
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo("responseText", anchor: .bottom)
+                        }
+                    }
                 }
-                .frame(maxHeight: 120)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+            }
+            
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showResponseOverlay = false
+                    lastResponseText = ""
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 18, height: 18)
+                    .background(Color.white.opacity(0.15))
+                    .clipShape(Circle())
             }
         }
-        .frame(maxWidth: .infinity)
-        .background(Color.black.opacity(0.7))
-        .transition(.opacity.combined(with: .move(edge: .bottom)))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .transition(.opacity)
         .animation(.easeInOut(duration: 0.2), value: store.streamingText)
     }
     
