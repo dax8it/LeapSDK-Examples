@@ -19,7 +19,8 @@
       "motion",
       "cinematic"
     ],
-    "imageName": "work-01.jpg"
+    "imageName": "work-01.jpg",
+    "quote": "The best moments are the ones you almost miss."
   },
   {
     "id": "work-02",
@@ -40,7 +41,8 @@
       "high contrast",
       "gaze"
     ],
-    "imageName": "work-02.jpg"
+    "imageName": "work-02.jpg",
+    "quote": "Beauty is clarity meeting attitude."
   },
   {
     "id": "work-03",
@@ -61,7 +63,8 @@
       "presence",
       "editorial"
     ],
-    "imageName": "work-03.jpg"
+    "imageName": "work-03.jpg",
+    "quote": "Honest light can carry an entire frame."
   },
   {
     "id": "work-04",
@@ -72,7 +75,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-04.jpg"
+    "imageName": "work-04.jpg",
+    "quote": ""
   },
   {
     "id": "work-05",
@@ -83,7 +87,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-05.jpg"
+    "imageName": "work-05.jpg",
+    "quote": ""
   },
   {
     "id": "work-06",
@@ -94,7 +99,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-06.jpg"
+    "imageName": "work-06.jpg",
+    "quote": ""
   },
   {
     "id": "work-07",
@@ -105,7 +111,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-07.jpg"
+    "imageName": "work-07.jpg",
+    "quote": ""
   },
   {
     "id": "work-08",
@@ -116,7 +123,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-08.jpg"
+    "imageName": "work-08.jpg",
+    "quote": ""
   },
   {
     "id": "work-09",
@@ -127,7 +135,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-09.jpg"
+    "imageName": "work-09.jpg",
+    "quote": ""
   },
   {
     "id": "work-10",
@@ -138,7 +147,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-10.jpg"
+    "imageName": "work-10.jpg",
+    "quote": ""
   },
   {
     "id": "work-11",
@@ -149,7 +159,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-11.jpg"
+    "imageName": "work-11.jpg",
+    "quote": ""
   },
   {
     "id": "work-12",
@@ -160,7 +171,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-12.jpg"
+    "imageName": "work-12.jpg",
+    "quote": ""
   },
   {
     "id": "work-13",
@@ -171,7 +183,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-13.jpg"
+    "imageName": "work-13.jpg",
+    "quote": ""
   },
   {
     "id": "work-14",
@@ -182,7 +195,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-14.jpg"
+    "imageName": "work-14.jpg",
+    "quote": ""
   },
   {
     "id": "work-15",
@@ -193,7 +207,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-15.jpg"
+    "imageName": "work-15.jpg",
+    "quote": ""
   },
   {
     "id": "work-16",
@@ -204,7 +219,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-16.jpg"
+    "imageName": "work-16.jpg",
+    "quote": ""
   },
   {
     "id": "work-17",
@@ -215,7 +231,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-17.jpg"
+    "imageName": "work-17.jpg",
+    "quote": ""
   },
   {
     "id": "work-18",
@@ -226,7 +243,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-18.jpg"
+    "imageName": "work-18.jpg",
+    "quote": ""
   },
   {
     "id": "work-19",
@@ -237,7 +255,8 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-19.jpg"
+    "imageName": "work-19.jpg",
+    "quote": ""
   },
   {
     "id": "work-20",
@@ -248,6 +267,7 @@
     "story": "",
     "technique": "",
     "tags": [],
-    "imageName": "work-20.jpg"
+    "imageName": "work-20.jpg",
+    "quote": ""
   }
 ]

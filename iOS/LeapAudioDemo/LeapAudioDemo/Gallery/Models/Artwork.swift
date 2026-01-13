@@ -10,6 +10,7 @@ struct Artwork: Codable, Identifiable {
     let technique: String
     let tags: [String]
     let imageName: String
+    let quote: String?
     
     var displayTitle: String {
         title.isEmpty ? id : title

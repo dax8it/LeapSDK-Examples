@@ -2,7 +2,7 @@ import SwiftUI
 
 struct GalleryView: View {
     let exhibitStore: ExhibitStore
-    @State private var selectedArtwork: Artwork?
+    @State private var selectedIndex: Int?
     
     private let columns = [
         GridItem(.flexible(), spacing: 2),
@@ -18,10 +18,10 @@ struct GalleryView: View {
                         .padding()
                 } else {
                     LazyVGrid(columns: columns, spacing: 2) {
-                        ForEach(exhibitStore.artworks) { artwork in
+                        ForEach(Array(exhibitStore.artworks.enumerated()), id: \.element.id) { index, artwork in
                             ArtworkThumbnail(artwork: artwork)
                                 .onTapGesture {
-                                    selectedArtwork = artwork
+                                    selectedIndex = index
                                 }
                         }
                     }
@@ -29,14 +29,23 @@ struct GalleryView: View {
             }
             .navigationTitle(exhibitStore.artist?.name ?? "Gallery")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(item: $selectedArtwork) { artwork in
+            .fullScreenCover(item: Binding(
+                get: { selectedIndex.map { IndexWrapper(index: $0) } },
+                set: { selectedIndex = $0?.index }
+            )) { wrapper in
                 ArtworkDetailView(
-                    artwork: artwork,
+                    artworks: exhibitStore.artworks,
+                    initialIndex: wrapper.index,
                     artist: exhibitStore.artist
                 )
             }
         }
     }
+}
+
+struct IndexWrapper: Identifiable {
+    let index: Int
+    var id: Int { index }
 }
 
 struct ArtworkThumbnail: View {

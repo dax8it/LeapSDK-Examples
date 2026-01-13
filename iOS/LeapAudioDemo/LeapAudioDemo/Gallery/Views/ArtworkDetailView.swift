@@ -1,141 +1,222 @@
 import SwiftUI
 
 struct ArtworkDetailView: View {
-    let artwork: Artwork
+    let artworks: [Artwork]
+    let initialIndex: Int
     let artist: Artist?
     @Environment(\.dismiss) private var dismiss
-    @State private var showCurator = false
+    @State private var currentIndex: Int
+    @State private var store = CuratorAudioStore()
+    
+    init(artworks: [Artwork], initialIndex: Int, artist: Artist?) {
+        self.artworks = artworks
+        self.initialIndex = initialIndex
+        self.artist = artist
+        self._currentIndex = State(initialValue: initialIndex)
+    }
+    
+    private var currentArtwork: Artwork {
+        artworks[currentIndex]
+    }
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    artworkImage
-                    
-                    VStack(alignment: .leading, spacing: 20) {
-                        header
-                        
-                        if !artwork.summary.isEmpty {
-                            section(title: "About", content: artwork.summary)
-                        }
-                        
-                        if !artwork.story.isEmpty {
-                            section(title: "Story", content: artwork.story)
-                        }
-                        
-                        if !artwork.technique.isEmpty {
-                            section(title: "Technique", content: artwork.technique)
-                        }
-                        
-                        if !artwork.tags.isEmpty {
-                            tagsSection
-                        }
-                        
-                        askCuratorButton
-                    }
-                    .padding(20)
+        GeometryReader { geometry in
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    imageSection(geometry: geometry)
+                    quoteSection
+                    Spacer(minLength: 0)
+                    inputSection
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .sheet(isPresented: $showCurator) {
-                ArtworkCuratorSheet(artwork: artwork, artist: artist)
-            }
+        }
+        .task {
+            await store.setupModel()
+            updateContext()
+        }
+        .onChange(of: currentIndex) { _, _ in
+            updateContext()
         }
     }
     
-    private var artworkImage: some View {
-        GeometryReader { geometry in
-            if let uiImage = loadImage(named: artwork.imageName) {
+    private func updateContext() {
+        store.setContext(artist: artist, artwork: currentArtwork)
+    }
+    
+    @ViewBuilder
+    private func imageSection(geometry: GeometryProxy) -> some View {
+        let imageHeight = geometry.size.height * 0.65
+        
+        ZStack {
+            if let uiImage = loadImage(named: currentArtwork.imageName) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: geometry.size.width, height: geometry.size.width * 1.2)
+                    .frame(width: geometry.size.width, height: imageHeight)
                     .clipped()
             } else {
                 Rectangle()
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(width: geometry.size.width, height: geometry.size.width)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: geometry.size.width, height: imageHeight)
                     .overlay {
                         Image(systemName: "photo")
-                            .font(.largeTitle)
+                            .font(.system(size: 48))
                             .foregroundStyle(.gray)
                     }
             }
+            
+            VStack {
+                navigationArrows
+                Spacer()
+                titleOverlay
+            }
+            .frame(width: geometry.size.width, height: imageHeight)
         }
-        .aspectRatio(1/1.2, contentMode: .fit)
+        .frame(height: imageHeight)
     }
     
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(artwork.displayTitle)
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            HStack(spacing: 8) {
-                if !artwork.year.isEmpty {
-                    Text(artwork.year)
-                        .foregroundStyle(.secondary)
+    private var navigationArrows: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.body)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.black)
+                        .frame(width: 32, height: 32)
+                        .background(.white)
+                        .clipShape(Circle())
                 }
-                if !artwork.medium.isEmpty {
-                    if !artwork.year.isEmpty {
-                        Text("•")
-                            .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            
+            HStack {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        if currentIndex > 0 {
+                            currentIndex -= 1
+                        } else {
+                            currentIndex = artworks.count - 1
+                        }
                     }
-                    Text(artwork.medium)
-                        .foregroundStyle(.secondary)
+                } label: {
+                    Image(systemName: "arrow.left")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.black)
+                        .frame(width: 50, height: 50)
+                        .background(.white)
+                        .clipShape(Circle())
+                }
+                
+                Spacer()
+                
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        if currentIndex < artworks.count - 1 {
+                            currentIndex += 1
+                        } else {
+                            currentIndex = 0
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.right")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.black)
+                        .frame(width: 50, height: 50)
+                        .background(.white)
+                        .clipShape(Circle())
                 }
             }
-            .font(.subheadline)
+            .padding(.horizontal, 16)
         }
     }
     
-    private func section(title: String, content: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            Text(content)
-                .font(.body)
-        }
-    }
-    
-    private var tagsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Tags")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            
-            FlowLayout(spacing: 8) {
-                ForEach(artwork.tags, id: \.self) { tag in
-                    Text(tag)
-                        .font(.caption)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.gray.opacity(0.15))
-                        .clipShape(Capsule())
-                }
-            }
-        }
-    }
-    
-    private var askCuratorButton: some View {
-        Button {
-            showCurator = true
-        } label: {
-            Label("Ask about this work", systemImage: "mic.circle.fill")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.accentColor)
+    private var titleOverlay: some View {
+        HStack {
+            Text("\"\(currentArtwork.displayTitle)\"")
+                .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.black.opacity(0.7))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            Spacer()
         }
-        .padding(.top, 12)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 20)
+    }
+    
+    private var quoteSection: some View {
+        VStack(spacing: 0) {
+            if let quote = currentArtwork.quote, !quote.isEmpty {
+                Text("\"\(quote)\" – AC")
+                    .font(.system(size: 16, design: .serif))
+                    .italic()
+                    .foregroundStyle(.white.opacity(0.85))
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+            }
+        }
+        .background(Color.black)
+    }
+    
+    private var inputSection: some View {
+        VStack(spacing: 12) {
+            if store.isModelLoading {
+                HStack {
+                    ProgressView()
+                        .tint(.gray)
+                    Text("Loading curator...")
+                        .font(.footnote)
+                        .foregroundStyle(.gray)
+                }
+                .padding(.bottom, 8)
+            }
+            
+            if let status = store.status, status != "Ready" {
+                Text(status)
+                    .font(.footnote)
+                    .foregroundStyle(.gray)
+                    .lineLimit(2)
+            }
+            
+            HStack(spacing: 12) {
+                TextField("Ask about this work", text: $store.inputText)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+                    .onSubmit {
+                        store.sendTextPrompt()
+                    }
+                
+                Button {
+                    store.toggleRecording()
+                } label: {
+                    Image(systemName: store.isRecording ? "stop.fill" : "mic.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(store.isRecording ? Color.red : Color.gray.opacity(0.8))
+                        .clipShape(Circle())
+                }
+                .disabled(store.isModelLoading || store.isGenerating)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 30)
+        }
+        .background(Color(white: 0.15))
     }
     
     private func loadImage(named name: String) -> UIImage? {
@@ -155,83 +236,23 @@ struct ArtworkDetailView: View {
     }
 }
 
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-    
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(in: proposal.width ?? 0, subviews: subviews, spacing: spacing)
-        return result.size
-    }
-    
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(in: bounds.width, subviews: subviews, spacing: spacing)
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x,
-                                       y: bounds.minY + result.positions[index].y),
-                          proposal: .unspecified)
-        }
-    }
-    
-    struct FlowResult {
-        var size: CGSize = .zero
-        var positions: [CGPoint] = []
-        
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var x: CGFloat = 0
-            var y: CGFloat = 0
-            var rowHeight: CGFloat = 0
-            
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-                if x + size.width > maxWidth && x > 0 {
-                    x = 0
-                    y += rowHeight + spacing
-                    rowHeight = 0
-                }
-                positions.append(CGPoint(x: x, y: y))
-                rowHeight = max(rowHeight, size.height)
-                x += size.width + spacing
-                self.size.width = max(self.size.width, x)
-            }
-            self.size.height = y + rowHeight
-        }
-    }
-}
-
-struct ArtworkCuratorSheet: View {
-    let artwork: Artwork
-    let artist: Artist?
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            CuratorChatView(
-                exhibitStore: nil,
-                focusedArtwork: artwork,
-                focusedArtist: artist
-            )
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                }
-            }
-        }
-    }
-}
-
 #Preview {
     ArtworkDetailView(
-        artwork: Artwork(
-            id: "work-01",
-            title: "In-Between, DUMBO",
-            year: "2023",
-            medium: "Photograph (Black & White)",
-            summary: "A test summary",
-            story: "A test story",
-            technique: "A test technique",
-            tags: ["black and white", "street", "fashion"],
-            imageName: "work-01.jpg"
-        ),
+        artworks: [
+            Artwork(
+                id: "work-01",
+                title: "In-Between, DUMBO",
+                year: "2023",
+                medium: "Photograph (Black & White)",
+                summary: "A test summary",
+                story: "A test story",
+                technique: "A test technique",
+                tags: ["black and white", "street", "fashion"],
+                imageName: "work-01.jpg",
+                quote: "The best moments are the ones you almost miss."
+            )
+        ],
+        initialIndex: 0,
         artist: nil
     )
 }
