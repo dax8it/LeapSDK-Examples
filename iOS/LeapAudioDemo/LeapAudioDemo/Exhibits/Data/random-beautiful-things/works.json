@@ -1,0 +1,50 @@
+[
+  {
+    "id": "rbt-01",
+    "title": "Wind Moment",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "A perfect alignment of wind, fabric, and light—caught in the fraction of a second.",
+    "story": "Some images you plan. This one happened. The wind decided the composition.",
+    "technique": "Fast shutter, natural light, embracing the unpredictable.",
+    "tags": ["movement", "wind", "spontaneous", "fashion", "moment"],
+    "imageName": "work-07.jpg",
+    "quote": "The wind knows better than I do."
+  },
+  {
+    "id": "rbt-02",
+    "title": "Light Leak",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "Unexpected light bleeding into the frame creates an accidental masterpiece.",
+    "story": "A technical mistake became the best part of the image.",
+    "technique": "Embracing imperfection and optical accidents.",
+    "tags": ["light", "accident", "beautiful mistake", "ethereal"],
+    "imageName": "work-08.jpg",
+    "quote": ""
+  },
+  {
+    "id": "rbt-03",
+    "title": "Between Frames",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "The moment between poses—when the model thinks the camera isn't watching.",
+    "story": "Real moments happen when people stop performing.",
+    "technique": "Continuous shooting to capture transitional moments.",
+    "tags": ["candid", "natural", "in-between", "authentic"],
+    "imageName": "work-09.jpg",
+    "quote": ""
+  },
+  {
+    "id": "rbt-04",
+    "title": "Happy Accident",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "Motion blur and timing combine into something better than the planned shot.",
+    "story": "I was trying to capture something else entirely. This is what I got instead.",
+    "technique": "Slower shutter speed embracing movement.",
+    "tags": ["blur", "motion", "accident", "serendipity"],
+    "imageName": "work-10.jpg",
+    "quote": ""
+  }
+]

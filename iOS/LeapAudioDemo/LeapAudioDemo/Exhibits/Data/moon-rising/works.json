@@ -1,0 +1,50 @@
+[
+  {
+    "id": "mr-01",
+    "title": "Blue Hour",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "Shot in the brief window between sunset and darkness—when the sky glows blue and the city lights begin.",
+    "story": "There's a 20-minute window each evening when everything looks like a dream. This is from one of those moments.",
+    "technique": "Natural twilight light with careful exposure balance.",
+    "tags": ["twilight", "blue hour", "mood", "ethereal", "night"],
+    "imageName": "work-15.jpg",
+    "quote": "The best light happens when most people have stopped shooting."
+  },
+  {
+    "id": "mr-02",
+    "title": "Neon Silhouette",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "City neon creates a glowing outline around the model's form.",
+    "story": "I wanted to shoot the light, not the face. The silhouette became the portrait.",
+    "technique": "Backlit silhouette using urban neon as primary light source.",
+    "tags": ["silhouette", "neon", "night", "urban", "glow"],
+    "imageName": "work-16.jpg",
+    "quote": ""
+  },
+  {
+    "id": "mr-03",
+    "title": "Moonlight Study",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "Actual moonlight as the only light source—soft, silver, and impossibly romantic.",
+    "story": "No flash, no reflector. Just the moon and patience.",
+    "technique": "Long exposure with natural moonlight only.",
+    "tags": ["moonlight", "natural light", "romantic", "silver", "night"],
+    "imageName": "work-17.jpg",
+    "quote": ""
+  },
+  {
+    "id": "mr-04",
+    "title": "Night Portrait",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "A portrait that exists in the space between waking and dreaming.",
+    "story": "Night shoots have a different energy. Everyone moves slower, speaks softer.",
+    "technique": "Mixed ambient light with minimal fill.",
+    "tags": ["portrait", "night", "dreamy", "atmospheric", "mood"],
+    "imageName": "work-18.jpg",
+    "quote": ""
+  }
+]

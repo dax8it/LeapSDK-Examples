@@ -43,6 +43,8 @@ targets:
       - path: LeapAudioDemo
         excludes:
           - "Resources/**"
+          - "Gallery/Data/**"
+          - "Exhibits/Data/**"
     resources:
       - path: LeapAudioDemo/Assets.xcassets
         name: Assets
@@ -58,6 +60,13 @@ targets:
       - script: |
           cp -f "${SRCROOT}/LeapAudioDemo/Resources"/*.gguf "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/"
         name: Copy GGUF Models
+        basedOnDependencyAnalysis: false
+      - script: |
+          mkdir -p "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data"
+          cp -R "${SRCROOT}/LeapAudioDemo/Gallery/Data/"* "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data/"
+          mkdir -p "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data"
+          cp -R "${SRCROOT}/LeapAudioDemo/Exhibits/Data/"* "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data/"
+        name: Copy JSON Data
         basedOnDependencyAnalysis: false
     settings:
       base:

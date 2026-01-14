@@ -1,0 +1,50 @@
+[
+  {
+    "id": "nr-01",
+    "title": "Rooftop Beauty Study",
+    "year": "",
+    "medium": "Photograph (Black & White)",
+    "summary": "A classic beauty portrait made on a New York City rooftop, using black and white to emphasize structure, gaze, and timeless fashion elegance.",
+    "story": "This piece leans into the essentials of fashion beauty—clarity, attitude, and presence—stripping away distraction so the viewer stays with expression and form.",
+    "technique": "Rooftop beauty portrait in black and white; controlled framing and tonal contrast focused on facial structure and eyes.",
+    "tags": ["black and white", "beauty portrait", "NYC", "rooftop", "classic", "fashion"],
+    "imageName": "work-02.jpg",
+    "quote": "Beauty is clarity meeting attitude."
+  },
+  {
+    "id": "nr-02",
+    "title": "Natural Light Rooftop Portrait",
+    "year": "",
+    "medium": "Photograph (Black & White)",
+    "summary": "A fashion portrait captured on a New York City rooftop using only natural light—direct, minimal, and emotionally charged.",
+    "story": "Memorable for its simplicity and presence, this portrait became an award-winning image—proof that a strong moment and honest light can carry an entire frame.",
+    "technique": "Rooftop fashion portrait using available natural light only.",
+    "tags": ["black and white", "fashion portrait", "NYC", "rooftop", "natural light", "award-winning"],
+    "imageName": "work-03.jpg",
+    "quote": "Honest light can carry an entire frame."
+  },
+  {
+    "id": "nr-03",
+    "title": "Skyline Editorial",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "Fashion against the Manhattan skyline—editorial elegance meeting urban grandeur.",
+    "story": "The city as backdrop, the model as protagonist. Classic rooftop fashion photography.",
+    "technique": "Wide framing to include skyline context with fashion subject.",
+    "tags": ["skyline", "editorial", "Manhattan", "rooftop", "fashion"],
+    "imageName": "work-19.jpg",
+    "quote": ""
+  },
+  {
+    "id": "nr-04",
+    "title": "Above the City",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "A portrait with nothing but sky behind—clean, elevated, timeless.",
+    "story": "Sometimes the best backdrop is no backdrop at all. Just sky and presence.",
+    "technique": "Low angle shooting against open sky for clean background.",
+    "tags": ["sky", "minimal", "portrait", "elevated", "clean"],
+    "imageName": "work-20.jpg",
+    "quote": ""
+  }
+]

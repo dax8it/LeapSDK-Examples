@@ -1,0 +1,50 @@
+[
+  {
+    "id": "dmd-01",
+    "title": "The Survivor",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "One image from a session of hundreds—the one that survived every round of editing.",
+    "story": "I shot 400 frames. This is the one. Everything else was destroyed.",
+    "technique": "Ruthless curation from extensive shooting.",
+    "tags": ["portrait", "editorial", "survivor", "bold"],
+    "imageName": "work-11.jpg",
+    "quote": "Kill your darlings, save the one that matters."
+  },
+  {
+    "id": "dmd-02",
+    "title": "Reinvention",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "A portrait that broke the rules of the original concept—and became stronger for it.",
+    "story": "The brief said one thing. The image said another. I listened to the image.",
+    "technique": "Deviation from planned direction based on instinct.",
+    "tags": ["portrait", "experimental", "bold", "reinvention"],
+    "imageName": "work-12.jpg",
+    "quote": ""
+  },
+  {
+    "id": "dmd-03",
+    "title": "After the Cut",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "What remains after aggressive editing—pure, essential, undeniable.",
+    "story": "I removed everything that wasn't absolutely necessary.",
+    "technique": "Minimalist approach through subtractive editing.",
+    "tags": ["minimal", "essential", "edited", "pure"],
+    "imageName": "work-13.jpg",
+    "quote": ""
+  },
+  {
+    "id": "dmd-04",
+    "title": "Bold Choice",
+    "year": "",
+    "medium": "Photograph",
+    "summary": "An experimental frame that shouldn't work—but does.",
+    "story": "Everyone said to cut this one. I kept it anyway.",
+    "technique": "Trusting instinct over conventional wisdom.",
+    "tags": ["experimental", "bold", "unconventional", "risk"],
+    "imageName": "work-14.jpg",
+    "quote": ""
+  }
+]

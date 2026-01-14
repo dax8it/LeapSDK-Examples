@@ -1,0 +1,50 @@
+[
+  {
+    "id": "bc-01",
+    "title": "In-Between, DUMBO",
+    "year": "",
+    "medium": "Photograph (Black & White)",
+    "summary": "Shot on the streets of DUMBO, Brooklyn, this image captures an in-between moment where chance becomes part of the composition—wind, motion, and timing aligning into a single frame.",
+    "story": "Inspired by the 1990s fashion photography of Peter Lindbergh—one of Alex Covo's key influences—this work embraces spontaneity. The wind lifts the model's hair in perfect sync, turning randomness into a quiet, cinematic punctuation.",
+    "technique": "Street-location fashion portrait in black and white with an emphasis on natural movement and timing.",
+    "tags": ["black and white", "street fashion", "DUMBO", "Brooklyn", "cinematic"],
+    "imageName": "work-01.jpg",
+    "quote": "The best moments are the ones you almost miss."
+  },
+  {
+    "id": "bc-02",
+    "title": "Urban Grit",
+    "year": "",
+    "medium": "Photograph (Black & White)",
+    "summary": "A raw street portrait capturing the edge and energy of NYC's urban landscape.",
+    "story": "This image strips fashion down to its essential elements—attitude, texture, and contrast against concrete.",
+    "technique": "High contrast black and white with emphasis on architectural framing.",
+    "tags": ["black and white", "street", "urban", "NYC", "gritty"],
+    "imageName": "work-04.jpg",
+    "quote": ""
+  },
+  {
+    "id": "bc-03",
+    "title": "Shadow Play",
+    "year": "",
+    "medium": "Photograph (Black & White)",
+    "summary": "Hard shadows cut across the frame, creating graphic patterns that merge with the model's silhouette.",
+    "story": "Inspired by film noir aesthetics, this work uses light as a second subject.",
+    "technique": "Dramatic shadow work using natural light and architectural elements.",
+    "tags": ["black and white", "shadows", "noir", "graphic", "minimal"],
+    "imageName": "work-05.jpg",
+    "quote": ""
+  },
+  {
+    "id": "bc-04",
+    "title": "Concrete Canvas",
+    "year": "",
+    "medium": "Photograph (Black & White)",
+    "summary": "Fashion against raw city infrastructure—steel, concrete, and the human form in dialogue.",
+    "story": "The city becomes both backdrop and collaborator in this urban fashion moment.",
+    "technique": "Location portrait utilizing industrial textures and natural city light.",
+    "tags": ["black and white", "industrial", "urban", "fashion", "minimal"],
+    "imageName": "work-06.jpg",
+    "quote": ""
+  }
+]

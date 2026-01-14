@@ -1,0 +1,39 @@
+{
+  "exhibits": [
+    {
+      "id": "black-canvas",
+      "title": "Black Canvas",
+      "shortStatement": "A gritty black-and-white collection built on street energy and sharp fashion presence—minimal, raw, and cinematic.",
+      "coverImageName": "black-canvas-cover",
+      "order": 1
+    },
+    {
+      "id": "random-beautiful-things",
+      "title": "Random Beautiful Things",
+      "shortStatement": "A celebration of chance: small, unplanned moments that become photographs—wind, movement, light, and timing turning into story.",
+      "coverImageName": "random-beautiful-things-cover",
+      "order": 2
+    },
+    {
+      "id": "destroy-my-darlings",
+      "title": "Destroy My Darlings",
+      "shortStatement": "A collection about editing and reinvention—bold portraits and experiments where the strongest image survives the cut.",
+      "coverImageName": "destroy-my-darlings-cover",
+      "order": 3
+    },
+    {
+      "id": "moon-rising",
+      "title": "Moon Rising",
+      "shortStatement": "A nocturnal series shaped by mood and glow—night light, silhouettes, and dreamlike atmospheres that feel between reality and film.",
+      "coverImageName": "moon-rising-cover",
+      "order": 4
+    },
+    {
+      "id": "nyc-rooftops",
+      "title": "NYC Rooftops",
+      "shortStatement": "Fashion portraits above the city—clean light, strong lines, and skyline air, captured with a timeless editorial sensibility.",
+      "coverImageName": "nyc-rooftops-cover",
+      "order": 5
+    }
+  ]
+}
