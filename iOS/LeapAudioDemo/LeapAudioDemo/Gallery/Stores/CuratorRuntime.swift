@@ -233,10 +233,10 @@ final class CuratorRuntime {
             case .autoTour:
                 try session.setCategory(.playback, mode: .default, options: [.duckOthers])
             case .pushToTalk:
-                try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+                try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
             case .conversation:
                 // voiceChat mode optimized for real-time conversation
-                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
             case .idle:
                 try session.setCategory(.playback, mode: .default, options: [])
             }
@@ -390,6 +390,8 @@ final class CuratorRuntime {
             onStatusChange?("Function call: \(calls.count)")
         case .complete(let completion):
             finishGeneration(with: completion)
+        @unknown default:
+            break
         }
     }
     

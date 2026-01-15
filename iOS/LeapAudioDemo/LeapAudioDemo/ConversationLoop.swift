@@ -2,6 +2,33 @@ import AVFoundation
 import Foundation
 import LeapSDK
 
+/// Thread-safe audio buffer for collecting samples from audio tap
+private final class AudioBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var samples: [Float] = []
+    var sampleRate: Double = 16_000
+    
+    func append(_ newSamples: [Float]) {
+        lock.lock()
+        defer { lock.unlock() }
+        samples.append(contentsOf: newSamples)
+    }
+    
+    func flush() -> [Float] {
+        lock.lock()
+        defer { lock.unlock() }
+        let result = samples
+        samples.removeAll(keepingCapacity: true)
+        return result
+    }
+    
+    func clear() {
+        lock.lock()
+        defer { lock.unlock() }
+        samples.removeAll(keepingCapacity: true)
+    }
+}
+
 /// Manages real-time conversational audio with LFM2.5-Audio model
 /// The model natively processes audio and determines speech flow - no external VAD needed
 @MainActor
@@ -20,15 +47,11 @@ final class ConversationLoop {
     
     private let engine = AVAudioEngine()
     private let playbackManager = AudioPlaybackManager()
-    private let audioQueue = DispatchQueue(label: "ai.leap.conversation.audio", qos: .userInteractive)
+    private let audioBuffer = AudioBuffer()  // Thread-safe audio storage
     
     private var modelRunner: ModelRunner?
     private var conversation: Conversation?
     private var conversationTask: Task<Void, Never>?
-    
-    // Audio buffers
-    private var audioSamples: [Float] = []
-    private var sampleRate: Double = 16_000
     
     // Conversation history with modality flags
     private var history: [ChatMessage] = []
@@ -91,7 +114,7 @@ final class ConversationLoop {
         
         // Configure audio session for conversation
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
         try session.setActive(true)
         
         playbackManager.prepareSession()
@@ -112,9 +135,7 @@ final class ConversationLoop {
         conversationTask = nil
         playbackManager.reset()
         
-        audioQueue.sync {
-            audioSamples.removeAll()
-        }
+        audioBuffer.clear()
         
         history.removeAll()
         conversation = nil
@@ -141,7 +162,7 @@ final class ConversationLoop {
         do {
             let input = engine.inputNode
             let format = input.outputFormat(forBus: 0)
-            sampleRate = format.sampleRate
+            audioBuffer.sampleRate = format.sampleRate
             
             input.removeTap(onBus: 0)
             input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
@@ -153,7 +174,7 @@ final class ConversationLoop {
             
             lastSendTime = Date()
             updateState(.listening)
-            print("[ConversationLoop] 🎤 Listening (sampleRate: \(sampleRate))")
+            print("[ConversationLoop] 🎤 Listening (sampleRate: \(audioBuffer.sampleRate))")
             
         } catch {
             print("[ConversationLoop] ❌ Failed to start listening: \(error)")
@@ -182,16 +203,16 @@ final class ConversationLoop {
             self.onAudioLevel?(min(rms * 5, 1.0))
         }
         
-        // Accumulate samples
-        audioQueue.async { [weak self] in
-            self?.audioSamples.append(contentsOf: samples)
-        }
+        // Accumulate samples in thread-safe buffer
+        audioBuffer.append(samples)
         
         // Check if it's time to send a chunk to the model
         // The model will internally determine if there's meaningful speech
         let now = Date()
         if let lastSend = lastSendTime, now.timeIntervalSince(lastSend) >= chunkInterval {
-            sendAudioToModel()
+            Task { @MainActor in
+                self.sendAudioToModel()
+            }
         }
     }
     
@@ -204,19 +225,14 @@ final class ConversationLoop {
     // MARK: - Model Interaction
     
     private func sendAudioToModel() {
-        var samplesToSend: [Float] = []
-        let rate = Int(sampleRate)
-        
-        audioQueue.sync {
-            samplesToSend = audioSamples
-            audioSamples.removeAll(keepingCapacity: true)
-        }
+        let samplesToSend = audioBuffer.flush()
+        let rate = Int(audioBuffer.sampleRate)
         
         guard !samplesToSend.isEmpty else { return }
         
         lastSendTime = Date()
         
-        Task { @MainActor in
+        Task {
             await self.processUserAudio(samples: samplesToSend, sampleRate: rate)
         }
     }
@@ -277,6 +293,9 @@ final class ConversationLoop {
                             
                         case .complete(let completion):
                             self.handleCompletion(completion, responseText: responseText, hasAudio: responseHasAudio)
+                            
+                        @unknown default:
+                            break
                         }
                     }
                 }
