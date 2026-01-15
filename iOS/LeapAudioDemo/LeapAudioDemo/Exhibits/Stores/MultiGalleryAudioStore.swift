@@ -194,8 +194,13 @@ final class MultiGalleryAudioStore {
         }
     }
     
+    /// Simple system prompt for push-to-talk (context is in user message)
     private func getSystemPrompt() -> String {
-        // Build full context for conversation mode (same as push-to-talk)
+        return "Respond with interleaved text and audio."
+    }
+    
+    /// Full system prompt for conversation mode (context must be in system prompt)
+    private func getConversationSystemPrompt() -> String {
         let contextPacket = buildContextPacket()
         let instructions = getCuratorInstructions()
         return """
@@ -334,7 +339,7 @@ final class MultiGalleryAudioStore {
     func startConversation() async {
         print("[MultiGalleryAudioStore] 💬 Starting conversation mode")
         
-        let systemPrompt = getSystemPrompt()
+        let systemPrompt = getConversationSystemPrompt()
         
         do {
             try await runtime.startConversation(systemPrompt: systemPrompt)

@@ -61,6 +61,7 @@ final class ConversationLoop {
     private(set) var state: State = .idle
     private(set) var isActive = false
     private var shouldContinue = true
+    private var generationComplete = false  // Track if model finished generating
     
     // Timing for chunked streaming
     private var lastSendTime: Date?
@@ -84,11 +85,17 @@ final class ConversationLoop {
         playbackManager.onPlaybackComplete = { [weak self] in
             Task { @MainActor in
                 guard let self, self.isActive else { return }
+                
+                // Only resume listening if generation is complete
+                // Otherwise, more audio chunks may still be coming
+                guard self.generationComplete else { return }
+                
                 print("[ConversationLoop] 🔊 Playback complete, resuming listening")
                 self.onTurnComplete?()
                 
                 // Resume listening after model finishes speaking
                 if self.shouldContinue {
+                    self.generationComplete = false  // Reset for next turn
                     self.startListening()
                 }
             }
@@ -129,6 +136,7 @@ final class ConversationLoop {
         
         shouldContinue = false
         isActive = false
+        generationComplete = false
         
         stopListening()
         conversationTask?.cancel()
@@ -248,6 +256,7 @@ final class ConversationLoop {
         
         stopListening()
         updateState(.processing)
+        generationComplete = false  // Reset for new generation
         
         // Create audio message content
         let audioContent = ChatMessageContent.fromFloatSamples(samples, sampleRate: sampleRate)
@@ -316,12 +325,13 @@ final class ConversationLoop {
     private func handleCompletion(_ completion: MessageCompletion, responseText: String, hasAudio: Bool) {
         print("[ConversationLoop] ✅ Response complete (hasAudio: \(hasAudio), text: \(responseText.prefix(50))...)")
         
-        // Note: LFM2.5 audio engine doesn't support history replay
-        // Each turn is independent, so we don't maintain conversation history
+        // Mark generation as complete so playback callback knows it can resume listening
+        generationComplete = true
         
         // If no audio was generated, resume listening immediately
-        // Otherwise, playback callback will resume listening
+        // Otherwise, playback callback will resume listening when audio finishes
         if !hasAudio && isActive && shouldContinue {
+            generationComplete = false  // Reset for next turn
             startListening()
         }
     }
