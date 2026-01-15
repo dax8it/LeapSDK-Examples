@@ -190,31 +190,83 @@ struct GalleriesOverviewView: View {
     }
     
     private var inputSection: some View {
-        HStack(spacing: 12) {
-            TextField("Ask about galleries...", text: $audioStore.inputText)
-                .textFieldStyle(.plain)
-                .foregroundStyle(.black)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.white)
-                .clipShape(Capsule())
-                .onSubmit {
-                    audioStore.sendTextPrompt()
+        VStack(spacing: 12) {
+            if audioStore.isConversationActive {
+                conversationActiveView
+            } else {
+                HStack(spacing: 12) {
+                    TextField("Ask about galleries...", text: $audioStore.inputText)
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                        .onSubmit {
+                            audioStore.sendTextPrompt()
+                        }
+                    
+                    // Push-to-talk button
+                    Button {
+                        audioStore.toggleRecording()
+                    } label: {
+                        Image(systemName: audioStore.isRecording ? "stop.fill" : "mic.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .frame(width: 50, height: 50)
+                            .background(audioStore.isRecording ? Color.red : Color.white.opacity(0.3))
+                            .clipShape(Circle())
+                    }
+                    .disabled(audioStore.isModelLoading || audioStore.isGenerating)
+                    
+                    // Conversation mode button
+                    Button {
+                        Task {
+                            await audioStore.startConversation()
+                        }
+                    } label: {
+                        Image(systemName: "waveform.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .frame(width: 50, height: 50)
+                            .background(Color.blue.opacity(0.8))
+                            .clipShape(Circle())
+                    }
+                    .disabled(audioStore.isModelLoading || audioStore.isGenerating || audioStore.isRecording)
                 }
-            
-            Button {
-                audioStore.toggleRecording()
-            } label: {
-                Image(systemName: audioStore.isRecording ? "stop.fill" : "mic.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white)
-                    .frame(width: 50, height: 50)
-                    .background(audioStore.isRecording ? Color.red : Color.white.opacity(0.3))
-                    .clipShape(Circle())
             }
-            .disabled(audioStore.isModelLoading || audioStore.isGenerating)
         }
         .padding(.horizontal, 20)
+    }
+    
+    private var conversationActiveView: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 3) {
+                ForEach(0..<7, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.green.opacity(Double(i) < Double(audioStore.audioLevel * 7) ? 1.0 : 0.3))
+                        .frame(width: 6, height: CGFloat(8 + i * 4))
+                }
+            }
+            .frame(height: 36)
+            
+            Button {
+                audioStore.stopConversation()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.title3)
+                    Text("End Conversation")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.red.opacity(0.8))
+                .clipShape(Capsule())
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 
