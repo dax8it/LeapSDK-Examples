@@ -1,0 +1,28 @@
+# Planning-with-Files Protocol (Manus-Style)
+
+You must follow the "Planning-with-Files" pattern for all complex tasks. This protocol ensures persistent state management and prevents AI drift by maintaining three specific Markdown files in the project root.
+
+## 1. Core File Requirements
+Always initialize and maintain these three files:
+- **task_plan.md**: The master roadmap. Tracks phases (Pending, In Progress, Complete), key questions, and a persistent error log[cite: 5, 8, 11].
+- **findings.md**: The technical knowledge base. Captures research, technical decisions with rationale, and browser/search discoveries[cite: 12, 13, 85].
+- **progress.md**: The session log. Records specific actions, test results, and the "5-Question Reboot Check"[cite: 17, 18, 71].
+
+## 2. Mandatory Behavioral Rules
+- **The 2-Action Rule**: You MUST update `findings.md` after every two (2) browser searches, URL views, or major file-read operations to prevent losing context[cite: 85, 86].
+- **The Error-First Rule**: Before attempting to fix any error (terminal, compiler, or logic), you MUST log the error, your attempt number, and the intended resolution in both `task_plan.md` and `progress.md`[cite: 11, 17, 86].
+- **Attention Manipulation**: Before making any major technical decision or starting a new phase, you MUST re-read `task_plan.md` to refresh your understanding of the primary goal[cite: 11].
+- **Phase Transition**: You cannot move to a new phase until the current phase is marked as `complete` in both `task_plan.md` and `progress.md`[cite: 22].
+
+## 3. The 5-Question Reboot
+If you get stuck, encounter a repeating error, or the user starts a new session, you MUST answer these questions in `progress.md`:
+1. Where am I? (Current phase/sub-task)
+2. Where am I going? (Next immediate steps)
+3. What is the goal? (The ultimate end-state)
+4. What have I learned? (Summary of findings.md)
+5. What have I done? (Summary of progress.md)
+[cite: 18, 43, 71]
+
+## 4. Documentation Standards
+- Use Markdown tables for Decisions, Errors, and Test Results[cite: 10, 30, 40].
+- Be concise but specific (e.g., "Fixed FileNotFoundError" instead of "Fixed error")[cite: 66, 83].

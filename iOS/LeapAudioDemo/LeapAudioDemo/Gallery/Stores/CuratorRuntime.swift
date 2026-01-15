@@ -6,11 +6,13 @@ enum CuratorMode: String {
     case idle
     case autoTour
     case pushToTalk
+    case conversation  // Real-time conversational mode (model handles speech flow natively)
 }
 
 enum CuratorState: String {
     case idle
     case recording
+    case listening      // Continuous listening in conversation mode
     case generating
     case playing
 }
@@ -25,6 +27,7 @@ final class CuratorRuntime {
     
     private let playbackManager = AudioPlaybackManager()
     private let recorder = AudioRecorder()
+    private let conversationLoop = ConversationLoop()
     private var modelRunner: ModelRunner?
     private var conversation: Conversation?
     private var streamingTask: Task<Void, Never>?
@@ -39,10 +42,13 @@ final class CuratorRuntime {
     var onGenerationError: ((Error) -> Void)?
     var onPlaybackComplete: (() -> Void)?
     var onStatusChange: ((String) -> Void)?
+    var onAudioLevel: ((Float) -> Void)?
+    var onConversationStateChange: ((ConversationLoop.State) -> Void)?
     
     private init() {
         print("[CuratorRuntime] 🚀 Initializing singleton")
         setupPlaybackCallback()
+        setupConversationLoopCallbacks()
     }
     
     private func setupPlaybackCallback() {
@@ -54,6 +60,53 @@ final class CuratorRuntime {
                     self.state = .idle
                     self.onPlaybackComplete?()
                 }
+            }
+        }
+    }
+    
+    private func setupConversationLoopCallbacks() {
+        conversationLoop.onStateChange = { [weak self] loopState in
+            Task { @MainActor in
+                guard let self else { return }
+                self.onConversationStateChange?(loopState)
+                
+                // Map conversation loop state to curator state
+                switch loopState {
+                case .idle:
+                    self.state = .idle
+                case .listening:
+                    self.state = .listening
+                case .processing:
+                    self.state = .generating
+                    self.isGenerating = true
+                case .speaking:
+                    self.state = .playing
+                    self.isGenerating = false
+                }
+            }
+        }
+        
+        conversationLoop.onStreamingText = { [weak self] text in
+            Task { @MainActor in
+                self?.onStreamingText?(text)
+            }
+        }
+        
+        conversationLoop.onAudioLevel = { [weak self] level in
+            Task { @MainActor in
+                self?.onAudioLevel?(level)
+            }
+        }
+        
+        conversationLoop.onError = { [weak self] error in
+            Task { @MainActor in
+                self?.onGenerationError?(error)
+            }
+        }
+        
+        conversationLoop.onTurnComplete = { [weak self] in
+            Task { @MainActor in
+                self?.onStatusChange?("Listening...")
             }
         }
     }
@@ -101,6 +154,11 @@ final class CuratorRuntime {
         print("[CuratorRuntime] Current mode=\(mode.rawValue), state=\(state.rawValue)")
         
         let previousMode = mode
+        
+        // Stop conversation loop if active
+        if conversationLoop.isActive {
+            conversationLoop.stop()
+        }
         
         await cancelGeneration()
         
@@ -176,6 +234,9 @@ final class CuratorRuntime {
                 try session.setCategory(.playback, mode: .default, options: [.duckOthers])
             case .pushToTalk:
                 try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            case .conversation:
+                // voiceChat mode optimized for real-time conversation
+                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
             case .idle:
                 try session.setCategory(.playback, mode: .default, options: [])
             }
@@ -201,6 +262,44 @@ final class CuratorRuntime {
         await reconfigureAudioSession(for: .pushToTalk)
         mode = .pushToTalk
         playbackManager.prepareSession()
+    }
+    
+    /// Start real-time conversational mode
+    /// Model handles speech flow natively - no external VAD needed
+    func startConversation(systemPrompt: String) async throws {
+        guard let modelRunner else {
+            throw NSError(domain: "CuratorRuntime", code: 2, userInfo: [NSLocalizedDescriptionKey: "Model not loaded"])
+        }
+        
+        print("[CuratorRuntime] 💬 Starting Conversation mode")
+        await hardReset()
+        mode = .conversation
+        state = .listening
+        
+        try conversationLoop.start(modelRunner: modelRunner, systemPrompt: systemPrompt)
+        onStatusChange?("Listening...")
+    }
+    
+    /// Stop conversational mode
+    func stopConversation() {
+        guard mode == .conversation else { return }
+        
+        print("[CuratorRuntime] 💬 Stopping Conversation mode")
+        conversationLoop.stop()
+        mode = .idle
+        state = .idle
+        onStatusChange?("Ready")
+    }
+    
+    /// Interrupt the current conversation turn (e.g., user wants to speak over model)
+    func interruptConversation() {
+        guard mode == .conversation else { return }
+        conversationLoop.interrupt()
+    }
+    
+    /// Check if conversation mode is active
+    var isConversationActive: Bool {
+        mode == .conversation && conversationLoop.isActive
     }
     
     func generate(message: ChatMessage, systemPrompt: String) async {

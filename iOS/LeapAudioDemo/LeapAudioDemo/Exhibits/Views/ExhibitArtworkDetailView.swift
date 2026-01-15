@@ -494,19 +494,7 @@ struct ExhibitArtworkDetailView: View {
     }
     
     private func loadImage(named name: String) -> UIImage? {
-        let baseName = name.replacingOccurrences(of: ".jpg", with: "")
-            .replacingOccurrences(of: ".png", with: "")
-        
-        if let bundlePath = Bundle.main.path(forResource: baseName, ofType: "jpg", inDirectory: "Artworks") {
-            return UIImage(contentsOfFile: bundlePath)
-        }
-        if let bundlePath = Bundle.main.path(forResource: baseName, ofType: "jpg") {
-            return UIImage(contentsOfFile: bundlePath)
-        }
-        if let asset = UIImage(named: baseName) {
-            return asset
-        }
-        return nil
+        ImageLoader.loadArtworkImage(named: name)
     }
 }
 

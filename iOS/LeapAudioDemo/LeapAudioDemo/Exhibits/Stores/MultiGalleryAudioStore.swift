@@ -20,6 +20,8 @@ final class MultiGalleryAudioStore {
     var isModelLoading = false
     var isGenerating = false
     var isRecording = false
+    var isConversationActive = false
+    var audioLevel: Float = 0
     var showDebugPrompt = false
     var lastPromptDebug: String = ""
     var onAudioPlaybackComplete: (() -> Void)?
@@ -72,6 +74,25 @@ final class MultiGalleryAudioStore {
         runtime.onPlaybackComplete = { [weak self] in
             print("[MultiGalleryAudioStore] 🔊 Playback complete, triggering callback")
             self?.onAudioPlaybackComplete?()
+        }
+        
+        runtime.onAudioLevel = { [weak self] level in
+            self?.audioLevel = level
+        }
+        
+        runtime.onConversationStateChange = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case .idle:
+                self.isConversationActive = false
+                self.isGenerating = false
+            case .listening:
+                self.isGenerating = false
+            case .processing:
+                self.isGenerating = true
+            case .speaking:
+                self.isGenerating = false
+            }
         }
     }
     
@@ -295,6 +316,47 @@ final class MultiGalleryAudioStore {
         runtime.cancelRecording()
         isRecording = false
         status = "Recording cancelled."
+    }
+    
+    // MARK: - Conversation Mode
+    
+    /// Start real-time conversational mode
+    /// Model handles speech flow natively - continuous listening and responding
+    func startConversation() async {
+        print("[MultiGalleryAudioStore] 💬 Starting conversation mode")
+        
+        let systemPrompt = getSystemPrompt()
+        
+        do {
+            try await runtime.startConversation(systemPrompt: systemPrompt)
+            isConversationActive = true
+            status = "Listening..."
+        } catch {
+            status = "Failed to start conversation: \(error.localizedDescription)"
+            print("[MultiGalleryAudioStore] ❌ Conversation start failed: \(error)")
+        }
+    }
+    
+    /// Stop conversational mode
+    func stopConversation() {
+        print("[MultiGalleryAudioStore] 💬 Stopping conversation mode")
+        runtime.stopConversation()
+        isConversationActive = false
+        status = "Ready"
+    }
+    
+    /// Toggle conversation mode on/off
+    func toggleConversation() async {
+        if isConversationActive {
+            stopConversation()
+        } else {
+            await startConversation()
+        }
+    }
+    
+    /// Interrupt current model response (e.g., user wants to speak)
+    func interruptConversation() {
+        runtime.interruptConversation()
     }
     
     private func sendAudioPrompt(samples: [Float], sampleRate: Int) {

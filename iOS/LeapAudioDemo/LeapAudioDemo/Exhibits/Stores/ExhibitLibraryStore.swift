@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 @Observable
 @MainActor
@@ -19,19 +20,56 @@ final class ExhibitLibraryStore {
     var debugActiveExhibitID: String { activeExhibit?.id ?? "none" }
     var debugSelectedArtworkID: String { selectedArtwork?.id ?? "none" }
     
+    /// Exhibits that have at least one work with a valid image
+    var exhibitsWithImages: [ExhibitMeta] {
+        exhibits.filter { exhibit in
+            guard let imageName = exhibit.effectiveCoverImageName else { return false }
+            return imageExists(named: imageName)
+        }
+    }
+    
     func loadIndex() {
         guard !isLoaded else { return }
         
         do {
             let index: ExhibitIndex = try loadJSON("index", subdirectory: "Exhibits/Data")
-            exhibits = index.exhibits.sorted { $0.order < $1.order }
+            var loadedExhibits = index.exhibits.sorted { $0.order < $1.order }
+            
+            // Preload first work image for each exhibit to use as cover fallback
+            for i in loadedExhibits.indices {
+                let exhibitID = loadedExhibits[i].id
+                if let firstImageName = loadFirstWorkImageName(for: exhibitID) {
+                    loadedExhibits[i].firstWorkImageName = firstImageName
+                    print("[ExhibitLibraryStore] 📷 Exhibit '\(exhibitID)' cover: \(firstImageName)")
+                } else {
+                    print("[ExhibitLibraryStore] ⚠️ Exhibit '\(exhibitID)' has no valid images")
+                }
+            }
+            
+            exhibits = loadedExhibits
             appHelp = try? loadJSON("app_help", subdirectory: "Exhibits/Data")
             isLoaded = true
-            print("[ExhibitLibraryStore] ✅ Loaded \(exhibits.count) exhibits")
+            print("[ExhibitLibraryStore] ✅ Loaded \(exhibits.count) exhibits, \(exhibitsWithImages.count) with images")
         } catch {
             loadError = "Failed to load exhibit index: \(error.localizedDescription)"
             print("[ExhibitLibraryStore] ❌ \(loadError ?? "")")
         }
+    }
+    
+    /// Load the first work's image name for an exhibit
+    private func loadFirstWorkImageName(for exhibitID: String) -> String? {
+        let worksPath = "Exhibits/Data/\(exhibitID)/works"
+        guard let works: [Artwork] = try? loadJSONByPath(worksPath, as: [Artwork].self),
+              let firstWork = works.first else {
+            return nil
+        }
+        // Verify image actually exists
+        return imageExists(named: firstWork.imageName) ? firstWork.imageName : nil
+    }
+    
+    /// Check if an image exists in assets or bundle
+    private func imageExists(named name: String) -> Bool {
+        ImageLoader.artworkImageExists(named: name)
     }
     
     func selectExhibit(_ exhibit: ExhibitMeta) {

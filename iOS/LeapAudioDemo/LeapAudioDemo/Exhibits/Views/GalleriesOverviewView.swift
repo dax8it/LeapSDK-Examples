@@ -178,7 +178,7 @@ struct GalleriesOverviewView: View {
     
     private var exhibitGrid: some View {
         LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(libraryStore.exhibits) { exhibit in
+            ForEach(libraryStore.exhibitsWithImages) { exhibit in
                 ExhibitCard(exhibit: exhibit) {
                     Task {
                         await audioStore.hardReset()
@@ -226,7 +226,7 @@ struct ExhibitCard: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 8) {
                 ZStack {
-                    if let imageName = exhibit.coverImageName,
+                    if let imageName = exhibit.effectiveCoverImageName,
                        let uiImage = loadCoverImage(named: imageName) {
                         Image(uiImage: uiImage)
                             .resizable()
@@ -274,16 +274,7 @@ struct ExhibitCard: View {
     }
     
     private func loadCoverImage(named name: String) -> UIImage? {
-        let baseName = name.replacingOccurrences(of: ".jpg", with: "")
-            .replacingOccurrences(of: ".png", with: "")
-        
-        if let asset = UIImage(named: baseName) {
-            return asset
-        }
-        if let bundlePath = Bundle.main.path(forResource: baseName, ofType: "jpg") {
-            return UIImage(contentsOfFile: bundlePath)
-        }
-        return nil
+        ImageLoader.loadArtworkImage(named: name)
     }
 }
 
