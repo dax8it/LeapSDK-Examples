@@ -253,17 +253,19 @@ final class ConversationLoop {
         let audioContent = ChatMessageContent.fromFloatSamples(samples, sampleRate: sampleRate)
         let userMessage = ChatMessage(role: .user, content: [audioContent])
         
-        // Add to history
-        history.append(userMessage)
-        
-        // Create conversation with full history (model remembers context)
-        let conv = Conversation(modelRunner: modelRunner, history: history)
-        conversation = conv
+        // LFM2.5 audio engine requires fresh conversation for each turn
+        // ("messages are not replayable, need to start a new dialog")
+        // So we create a new conversation with only the system prompt
+        let freshConversation = Conversation(
+            modelRunner: modelRunner,
+            history: [ChatMessage(role: .system, content: [.text(systemPrompt)])]
+        )
+        conversation = freshConversation
         
         playbackManager.reset()
         
         // Generate response
-        let stream = conv.generateResponse(message: userMessage)
+        let stream = freshConversation.generateResponse(message: userMessage)
         var responseText = ""
         var responseHasAudio = false
         
@@ -314,17 +316,8 @@ final class ConversationLoop {
     private func handleCompletion(_ completion: MessageCompletion, responseText: String, hasAudio: Bool) {
         print("[ConversationLoop] ✅ Response complete (hasAudio: \(hasAudio), text: \(responseText.prefix(50))...)")
         
-        // Append assistant response to history with modality flags
-        // This allows the model to remember what it said (both text and audio)
-        history.append(completion.message)
-        
-        // Trim history if too long to prevent context overflow
-        if history.count > 20 {
-            // Keep system prompt and recent messages
-            let systemMessage = history.first
-            history = [systemMessage].compactMap { $0 } + Array(history.suffix(15))
-            print("[ConversationLoop] 📝 Trimmed history to \(history.count) messages")
-        }
+        // Note: LFM2.5 audio engine doesn't support history replay
+        // Each turn is independent, so we don't maintain conversation history
         
         // If no audio was generated, resume listening immediately
         // Otherwise, playback callback will resume listening
