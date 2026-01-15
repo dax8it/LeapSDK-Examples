@@ -195,7 +195,16 @@ final class MultiGalleryAudioStore {
     }
     
     private func getSystemPrompt() -> String {
-        return "Respond with interleaved text and audio."
+        // Build full context for conversation mode (same as push-to-talk)
+        let contextPacket = buildContextPacket()
+        let instructions = getCuratorInstructions()
+        return """
+        Respond with interleaved text and audio.
+        
+        \(instructions)
+        
+        \(contextPacket)
+        """
     }
     
     func setupModel() async {
