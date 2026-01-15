@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -61,7 +61,7 @@
 		41A83AB90368E259DC45FDF0 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		4FA776FD950E1203A3F9F6EE /* AudioDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDemoApp.swift; sourceTree = "<group>"; };
 		53ECF28854F137D471134B12 /* AudioDemoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDemoStore.swift; sourceTree = "<group>"; };
-		53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LeapAudioDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LeapAudioDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		57152C0CC9792255FFB9C907 /* ConversationLoop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationLoop.swift; sourceTree = "<group>"; };
 		5FFB5EF7FF0CE3129FF125FA /* MultiGalleryRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiGalleryRootView.swift; sourceTree = "<group>"; };
 		83A06D9763D44E17C0CD0645 /* ExhibitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitStore.swift; sourceTree = "<group>"; };
@@ -78,7 +78,7 @@
 		EA98B6DB151AF8BB05FC9E84 /* AppHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHelp.swift; sourceTree = "<group>"; };
 		F793933F6B26F01DCC4F828B /* ImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoader.swift; sourceTree = "<group>"; };
 		F805F25BD5E0D2B4624EDA22 /* CuratorRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuratorRuntime.swift; sourceTree = "<group>"; };
-		FE079E43746B814C52E67A16 /* pari_rotate.mp4 */ = {isa = PBXFileReference; path = pari_rotate.mp4; sourceTree = "<group>"; };
+		FE079E43746B814C52E67A16 /* pari_rotate.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = pari_rotate.mp4; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -307,7 +307,6 @@
 			packageReferences = (
 				EEB06B02FCFD643A3391DC2C /* XCRemoteSwiftPackageReference "leap-ios" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -418,6 +417,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = WH7Z9N74X5;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Agentx Gallerist";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input is used to capture prompts.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -504,6 +504,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = WH7Z9N74X5;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Agentx Gallerist";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input is used to capture prompts.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

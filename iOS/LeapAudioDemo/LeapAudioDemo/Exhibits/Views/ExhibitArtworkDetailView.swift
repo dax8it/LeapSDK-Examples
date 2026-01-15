@@ -463,34 +463,89 @@ struct ExhibitArtworkDetailView: View {
                     .lineLimit(2)
             }
             
-            HStack(spacing: 12) {
-                TextField("Ask about this work", text: $audioStore.inputText)
-                    .textFieldStyle(.plain)
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.white)
-                    .clipShape(Capsule())
-                    .onSubmit {
-                        audioStore.sendTextPrompt()
+            // Conversation mode active view
+            if audioStore.isConversationActive {
+                conversationActiveView
+            } else {
+                // Standard input controls
+                HStack(spacing: 12) {
+                    TextField("Ask about this work", text: $audioStore.inputText)
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                        .onSubmit {
+                            audioStore.sendTextPrompt()
+                        }
+                    
+                    // Push-to-talk button
+                    Button {
+                        audioStore.toggleRecording()
+                    } label: {
+                        Image(systemName: audioStore.isRecording ? "stop.fill" : "mic.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(audioStore.isRecording ? Color.red : Color.gray.opacity(0.8))
+                            .clipShape(Circle())
                     }
-                
-                Button {
-                    audioStore.toggleRecording()
-                } label: {
-                    Image(systemName: audioStore.isRecording ? "stop.fill" : "mic.fill")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                        .frame(width: 56, height: 56)
-                        .background(audioStore.isRecording ? Color.red : Color.gray.opacity(0.8))
-                        .clipShape(Circle())
+                    .disabled(audioStore.isModelLoading || audioStore.isGenerating)
+                    
+                    // Conversation mode button
+                    Button {
+                        Task {
+                            await audioStore.startConversation()
+                        }
+                    } label: {
+                        Image(systemName: "waveform.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.blue.opacity(0.8))
+                            .clipShape(Circle())
+                    }
+                    .disabled(audioStore.isModelLoading || audioStore.isGenerating || audioStore.isRecording)
                 }
-                .disabled(audioStore.isModelLoading || audioStore.isGenerating)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
         }
         .background(Color(white: 0.15))
+    }
+    
+    private var conversationActiveView: some View {
+        VStack(spacing: 12) {
+            // Audio level indicator
+            HStack(spacing: 3) {
+                ForEach(0..<7, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.green.opacity(Double(i) < Double(audioStore.audioLevel * 7) ? 1.0 : 0.3))
+                        .frame(width: 6, height: CGFloat(8 + i * 4))
+                }
+            }
+            .frame(height: 36)
+            
+            // Stop conversation button
+            Button {
+                audioStore.stopConversation()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.title3)
+                    Text("End Conversation")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.red.opacity(0.8))
+                .clipShape(Capsule())
+            }
+        }
+        .padding(.vertical, 16)
+        .padding(.bottom, 20)
     }
     
     private func loadImage(named name: String) -> UIImage? {
