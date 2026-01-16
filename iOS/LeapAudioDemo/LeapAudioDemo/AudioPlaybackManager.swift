@@ -44,6 +44,13 @@ final class AudioPlaybackManager {
   private let playbackStuckTimeoutSeconds: Double = 10.0  // Auto-reset if stuck for 10s
   
   var onPlaybackComplete: (() -> Void)?
+  
+  // MUTE STATE: When muted, drop all incoming samples and stop playback
+  private var _isMuted = false
+  var isMuted: Bool {
+    get { queue.sync { _isMuted } }
+    set { setMuted(newValue) }
+  }
 
   init() {
     print("[AudioPlaybackManager] 🔊 Initializing (frame-based buffering with hysteresis)")
@@ -160,6 +167,9 @@ final class AudioPlaybackManager {
     
     queue.async { [weak self] in
       guard let self else { return }
+      
+      // MUTE: Drop samples immediately when muted
+      guard !self._isMuted else { return }
       
       self.configureSessionIfNeeded(sampleRate: Double(sampleRate))
       self.currentSampleRate = sampleRate
@@ -361,6 +371,32 @@ final class AudioPlaybackManager {
       self.sampleBuffer.removeAll()
       self.playbackStartTime = nil  // Clear stuck detection
       self.lastProgressTime = nil
+    }
+  }
+  
+  /// Set mute state - when muted, stops playback and clears buffers
+  func setMuted(_ muted: Bool) {
+    queue.async {
+      let wasMuted = self._isMuted
+      self._isMuted = muted
+      
+      if muted && !wasMuted {
+        // Just became muted: stop playback and clear all buffers
+        print("[AudioPlaybackManager] 🔇 === MUTED === (clearing buffers)")
+        self.stopDiagnosticLogging()
+        self.player.stop()
+        self.player.reset()
+        self.scheduledFrameCount = 0
+        self.totalBuffersEnqueued = 0
+        self.generationComplete = false
+        self.hasStartedPlayback = false
+        self.isInRefillMode = false
+        self.sampleBuffer.removeAll()
+        self.playbackStartTime = nil
+        self.lastProgressTime = nil
+      } else if !muted && wasMuted {
+        print("[AudioPlaybackManager] 🔊 === UNMUTED ===")
+      }
     }
   }
 

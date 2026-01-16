@@ -26,6 +26,18 @@ final class MultiGalleryAudioStore {
     var lastPromptDebug: String = ""
     var onAudioPlaybackComplete: (() -> Void)?
     
+    // MUTE STATE: Global mute toggle for audio output
+    var isMuted: Bool = false {
+        didSet {
+            runtime.setMuted(isMuted)
+            print("[MultiGalleryAudioStore] 🔇 Mute: \(isMuted)")
+        }
+    }
+    
+    func toggleMute() {
+        isMuted.toggle()
+    }
+    
     private var currentContext: MultiGalleryContext = .home
     private var libraryStore: ExhibitLibraryStore?
     

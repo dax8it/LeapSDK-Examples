@@ -67,6 +67,13 @@ struct HomeView: View {
                 lastResponseText = newText
             }
         }
+        // FIX #5: Navigation guard - stop conversation on any navigation away
+        .onDisappear {
+            if audioStore.isConversationActive {
+                print("[HomeView] 🛑 onDisappear: stopping conversation")
+                audioStore.stopConversation()
+            }
+        }
     }
     
     private var headerSection: some View {
@@ -223,27 +230,48 @@ struct HomeView: View {
             }
             .frame(height: 36)
             
-            Button {
-                audioStore.stopConversation()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "stop.circle.fill")
+            HStack(spacing: 16) {
+                // Mute button
+                Button {
+                    audioStore.toggleMute()
+                } label: {
+                    Image(systemName: audioStore.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                         .font(.title3)
-                    Text("End Conversation")
-                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(audioStore.isMuted ? Color.orange.opacity(0.8) : Color.white.opacity(0.3))
+                        .clipShape(Circle())
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.red.opacity(0.8))
-                .clipShape(Capsule())
+                
+                // End Conversation button
+                Button {
+                    audioStore.stopConversation()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.title3)
+                        Text("End Conversation")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.red.opacity(0.8))
+                    .clipShape(Capsule())
+                }
             }
         }
         .padding(.vertical, 8)
     }
     
     private var enterGalleriesButton: some View {
-        Button(action: onEnterGalleries) {
+        Button {
+            // FIX #4: End conversation immediately when navigating away (hard stop)
+            if audioStore.isConversationActive {
+                audioStore.stopConversation()
+            }
+            onEnterGalleries()
+        } label: {
             Text("Enter Galleries")
                 .font(.headline)
                 .foregroundStyle(.black)

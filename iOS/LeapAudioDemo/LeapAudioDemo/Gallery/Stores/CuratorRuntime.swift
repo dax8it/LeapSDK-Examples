@@ -666,6 +666,11 @@ final class CuratorRuntime {
         state = .idle
     }
     
+    /// Set mute state - forwards to playback manager
+    func setMuted(_ muted: Bool) {
+        playbackManager.setMuted(muted)
+    }
+    
     func debugStatus() -> String {
         """
         [CuratorRuntime Status]
