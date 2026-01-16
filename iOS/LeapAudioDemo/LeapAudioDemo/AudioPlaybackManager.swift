@@ -78,6 +78,15 @@ final class AudioPlaybackManager {
   var isPlaying: Bool {
     return isPlaybackActive || player.isPlaying
   }
+  
+  /// Total pending audio duration in milliseconds (for output length limiting)
+  var pendingDurationMs: Double {
+    queue.sync {
+      let bufferedMs = Double(sampleBuffer.count) / Double(currentSampleRate) * 1000.0
+      let pendingMs = Double(pendingBuffers * frameSize) / Double(currentSampleRate) * 1000.0
+      return bufferedMs + pendingMs
+    }
+  }
 
   func prepareSession() {
     queue.async {

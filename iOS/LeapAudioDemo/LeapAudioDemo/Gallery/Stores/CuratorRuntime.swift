@@ -2,6 +2,84 @@ import AVFoundation
 import Foundation
 import LeapSDK
 
+/// Coordinates generation to prevent decoder re-entrancy and ensure single-flight operation
+actor GenerationCoordinator {
+    private(set) var currentGenerationTask: Task<Void, Never>?
+    private(set) var isAcceptingAudioFrames = true
+    private(set) var generationID: UUID?
+    
+    /// Start a new generation, cancelling any existing one first
+    func beginGeneration() -> UUID {
+        // Block new audio frames during transition
+        isAcceptingAudioFrames = false
+        
+        // Cancel existing generation
+        currentGenerationTask?.cancel()
+        currentGenerationTask = nil
+        
+        // Create new generation ID
+        let newID = UUID()
+        generationID = newID
+        
+        print("[GenerationCoordinator] 🆕 Starting generation \(newID.uuidString.prefix(8))")
+        return newID
+    }
+    
+    /// Set the generation task after it's created
+    func setTask(_ task: Task<Void, Never>) {
+        currentGenerationTask = task
+    }
+    
+    /// Enable audio frame acceptance (call after playback buffer is ready)
+    func enableAudioFrames() {
+        isAcceptingAudioFrames = true
+        print("[GenerationCoordinator] ✅ Audio frames enabled")
+    }
+    
+    /// Check if audio frame should be accepted
+    func shouldAcceptAudioFrame(forGenerationID id: UUID) -> Bool {
+        guard isAcceptingAudioFrames else {
+            return false
+        }
+        guard generationID == id else {
+            return false
+        }
+        return true
+    }
+    
+    /// End generation and prepare for next
+    func endGeneration(id: UUID) {
+        guard generationID == id else { return }
+        print("[GenerationCoordinator] 🏁 Ending generation \(id.uuidString.prefix(8))")
+        currentGenerationTask = nil
+    }
+    
+    /// Two-phase reset: safely tear down with no in-flight frames
+    func prepareForReset() async {
+        print("[GenerationCoordinator] 🔄 Preparing for reset (phase 1: block frames)")
+        isAcceptingAudioFrames = false
+        
+        // Cancel and await the generation task
+        if let task = currentGenerationTask {
+            task.cancel()
+            // Give it time to cancel
+            for _ in 0..<20 {
+                if task.isCancelled { break }
+                try? await Task.sleep(nanoseconds: 25_000_000) // 25ms
+            }
+        }
+        currentGenerationTask = nil
+        generationID = nil
+        print("[GenerationCoordinator] 🔄 Reset prepared (phase 1 complete)")
+    }
+    
+    /// Complete reset after buffers are cleared
+    func completeReset() {
+        print("[GenerationCoordinator] 🔄 Reset complete (phase 2: ready for new generation)")
+        isAcceptingAudioFrames = true
+    }
+}
+
 enum CuratorMode: String {
     case idle
     case autoTour
@@ -28,6 +106,7 @@ final class CuratorRuntime {
     private let playbackManager = AudioPlaybackManager()
     private let recorder = AudioRecorder()
     private let conversationLoop = ConversationLoop()
+    private let generationCoordinator = GenerationCoordinator()  // Single-flight generation coordinator
     private var modelRunner: ModelRunner?
     private var conversation: Conversation?
     private var streamingTask: Task<Void, Never>?
@@ -35,6 +114,10 @@ final class CuratorRuntime {
     
     private let inferenceQueue = DispatchQueue(label: "ai.leap.curator.inference", qos: .userInitiated)
     private var activeGenerationID: UUID?
+    
+    // Output length limits to prevent runaway audio
+    private let maxOutputTokens: Int = 200  // Limit response length
+    private let maxPendingAudioMs: Double = 8000  // Soft stop if audio buffer exceeds 8s
     
     var onStreamingText: ((String) -> Void)?
     var onAudioSample: (([Float], Int) -> Void)?
@@ -141,7 +224,7 @@ final class CuratorRuntime {
             nGpuLayers: 0,
             mmProjPath: mmProjPath,
             audioDecoderPath: vocoderPath,
-            audioDecoderUseGpu: true,   // Offload vocoder to GPU
+            audioDecoderUseGpu: false,  // Disabled for stability testing (GPU path may cause ggml crashes)
             audioTokenizerPath: audioTokenizerPath
         )
         
@@ -157,6 +240,9 @@ final class CuratorRuntime {
         
         let previousMode = mode
         
+        // PHASE 1: Block audio frames and cancel generation safely
+        await generationCoordinator.prepareForReset()
+        
         // Stop conversation loop if active
         if conversationLoop.isActive {
             conversationLoop.stop()
@@ -164,6 +250,7 @@ final class CuratorRuntime {
         
         await cancelGeneration()
         
+        // PHASE 2: Now safe to clear buffers (no frames in flight)
         stopPlayback()
         
         stopRecording()
@@ -175,6 +262,9 @@ final class CuratorRuntime {
         mode = .idle
         state = .idle
         generationComplete = false
+        
+        // PHASE 3: Re-enable for next generation
+        await generationCoordinator.completeReset()
         
         print("[CuratorRuntime] 🔄 === HARD RESET COMPLETE === (was mode=\(previousMode.rawValue))")
     }
@@ -311,12 +401,14 @@ final class CuratorRuntime {
             return
         }
         
+        // Use GenerationCoordinator for single-flight generation
+        let genID = await generationCoordinator.beginGeneration()
+        
         if isGenerating {
             print("[CuratorRuntime] ⚠️ Already generating, cancelling previous...")
             await cancelGeneration()
         }
         
-        let genID = UUID()
         activeGenerationID = genID
         isGenerating = true
         generationComplete = false
@@ -327,6 +419,9 @@ final class CuratorRuntime {
         
         playbackManager.reset()
         
+        // Enable audio frames now that playback is ready
+        await generationCoordinator.enableAudioFrames()
+        
         let freshConversation = Conversation(
             modelRunner: modelRunner,
             history: [ChatMessage(role: .system, content: [.text(systemPrompt)])]
@@ -335,13 +430,23 @@ final class CuratorRuntime {
         
         let stream = freshConversation.generateResponse(message: message)
         
-        streamingTask = Task { [weak self] in
+        let task = Task { [weak self] in
             guard let self else { return }
+            
+            var tokenCount = 0
+            var shouldStop = false
             
             do {
                 for try await event in stream {
-                    if Task.isCancelled {
-                        print("[CuratorRuntime] 🧠 Generation task cancelled mid-stream (id=\(genID.uuidString.prefix(8)))")
+                    if Task.isCancelled || shouldStop {
+                        print("[CuratorRuntime] 🧠 Generation stopped (id=\(genID.uuidString.prefix(8)), tokens=\(tokenCount))")
+                        break
+                    }
+                    
+                    // Check with coordinator if we should accept this frame
+                    let shouldAccept = await self.generationCoordinator.shouldAcceptAudioFrame(forGenerationID: genID)
+                    guard shouldAccept else {
+                        print("[CuratorRuntime] 🧠 Frame rejected by coordinator")
                         break
                     }
                     
@@ -350,16 +455,31 @@ final class CuratorRuntime {
                         break
                     }
                     
+                    // Track tokens for output length limit
+                    if case .chunk = event {
+                        tokenCount += 1
+                    }
+                    
                     await MainActor.run {
-                        self.handleEvent(event)
+                        self.handleEvent(event, genID: genID, tokenCount: &tokenCount, shouldStop: &shouldStop)
+                    }
+                    
+                    // Check output length limits
+                    if tokenCount >= self.maxOutputTokens {
+                        print("[CuratorRuntime] ⚠️ Max output tokens reached (\(tokenCount)), stopping generation")
+                        shouldStop = true
                     }
                 }
                 
                 await MainActor.run {
                     if self.activeGenerationID == genID {
-                        print("[CuratorRuntime] 🧠 === GENERATION END === (id=\(genID.uuidString.prefix(8)))")
+                        print("[CuratorRuntime] 🧠 === GENERATION END === (id=\(genID.uuidString.prefix(8)), tokens=\(tokenCount))")
                     }
                 }
+                
+                // Notify coordinator that generation ended
+                await self.generationCoordinator.endGeneration(id: genID)
+                
             } catch {
                 print("[CuratorRuntime] 🧠 Generation error (id=\(genID.uuidString.prefix(8))): \(error)")
                 await MainActor.run {
@@ -375,15 +495,26 @@ final class CuratorRuntime {
                 }
             }
         }
+        
+        streamingTask = task
+        await generationCoordinator.setTask(task)
     }
     
-    private func handleEvent(_ event: MessageResponse) {
+    private func handleEvent(_ event: MessageResponse, genID: UUID, tokenCount: inout Int, shouldStop: inout Bool) {
         switch event {
         case .chunk(let text):
             onStreamingText?(text)
         case .reasoningChunk:
             onStatusChange?("Thinking...")
         case .audioSample(let samples, let sampleRate):
+            // Check audio buffer limit before enqueueing
+            let pendingMs = playbackManager.pendingDurationMs
+            if pendingMs >= maxPendingAudioMs {
+                print("[CuratorRuntime] ⚠️ Audio buffer limit reached (\(Int(pendingMs))ms), soft stopping generation")
+                shouldStop = true
+                return
+            }
+            
             state = .playing
             playbackManager.enqueue(samples: samples, sampleRate: sampleRate)
             onAudioSample?(samples, sampleRate)
@@ -391,14 +522,14 @@ final class CuratorRuntime {
         case .functionCall(let calls):
             onStatusChange?("Function call: \(calls.count)")
         case .complete(let completion):
-            finishGeneration(with: completion)
+            finishGeneration(with: completion, genID: genID)
         @unknown default:
             break
         }
     }
     
-    private func finishGeneration(with completion: MessageCompletion) {
-        print("[CuratorRuntime] 🧠 Generation finished, waiting for audio playback")
+    private func finishGeneration(with completion: MessageCompletion, genID: UUID) {
+        print("[CuratorRuntime] 🧠 Generation finished (id=\(genID.uuidString.prefix(8))), waiting for audio playback")
         isGenerating = false
         generationComplete = true
         
