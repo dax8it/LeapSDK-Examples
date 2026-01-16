@@ -199,54 +199,42 @@ final class MultiGalleryAudioStore {
         return "Respond with interleaved text and audio."
     }
     
-    /// Compact system prompt for conversation mode (~150 tokens vs ~470)
+    /// System prompt for conversation mode - MUST be exactly this string for LFM2.5
     private func getConversationSystemPrompt() -> String {
-        let context = buildCompactContext()
-        return """
-        Respond with interleaved text and audio. You are Alex Covo's photography curator. Be concise. Use ONLY provided context.
-        
-        \(context)
-        """
+        return "Respond with interleaved text and audio."
     }
     
-    /// Compact context for conversation mode - essential info only, no app guide
-    private func buildCompactContext() -> String {
-        guard let store = libraryStore else { return "[No context]" }
+    /// Compact context prefix for conversation mode audio - prepended to user audio
+    func getConversationContextPrefix() -> String {
+        guard let store = libraryStore else { return "" }
+        
+        var prefix = "You are Alex Covo's photography curator. Be concise.\n"
         
         switch currentContext {
         case .home:
-            var lines = ["[Artist: Alex Covo | Fashion & street photography]"]
             let galleries = store.exhibits.prefix(5).map { $0.title }
-            lines.append("[Galleries: \(galleries.joined(separator: ", "))]")
-            return lines.joined(separator: "\n")
+            prefix += "[Galleries: \(galleries.joined(separator: ", "))]\n"
             
         case .galleriesOverview:
-            var lines = ["[Artist: Alex Covo]"]
-            for exhibit in store.exhibits.prefix(5) {
-                lines.append("• \(exhibit.title): \(String(exhibit.shortStatement.prefix(50)))")
+            for exhibit in store.exhibits.prefix(4) {
+                prefix += "• \(exhibit.title): \(String(exhibit.shortStatement.prefix(40)))\n"
             }
-            return lines.joined(separator: "\n")
             
         case .exhibit(let exhibit):
-            var lines = ["[Gallery: \(exhibit.title)]"]
-            lines.append("Theme: \(String(exhibit.shortStatement.prefix(80)))")
-            let titles = store.activeWorks.compactMap { $0.title.isEmpty ? nil : $0.title }.prefix(6)
+            prefix += "[Gallery: \(exhibit.title)]\n"
+            let titles = store.activeWorks.compactMap { $0.title.isEmpty ? nil : $0.title }.prefix(5)
             if !titles.isEmpty {
-                lines.append("Works: \(titles.joined(separator: ", "))")
+                prefix += "Works: \(titles.joined(separator: ", "))\n"
             }
-            return lines.joined(separator: "\n")
             
         case .artwork(let exhibit, let artwork):
-            var lines = ["[Gallery: \(exhibit.title)]"]
-            lines.append("[Work: \(artwork.displayTitle)]")
+            prefix += "[Work: \(artwork.displayTitle) in \(exhibit.title)]\n"
             if !artwork.summary.isEmpty {
-                lines.append(String(artwork.summary.prefix(100)))
+                prefix += String(artwork.summary.prefix(80)) + "\n"
             }
-            if !artwork.story.isEmpty {
-                lines.append(String(artwork.story.prefix(100)))
-            }
-            return lines.joined(separator: "\n")
         }
+        
+        return prefix + "User audio follows:"
     }
     
     func setupModel() async {
@@ -377,9 +365,10 @@ final class MultiGalleryAudioStore {
         print("[MultiGalleryAudioStore] 💬 Starting conversation mode")
         
         let systemPrompt = getConversationSystemPrompt()
+        let contextPrefix = getConversationContextPrefix()
         
         do {
-            try await runtime.startConversation(systemPrompt: systemPrompt)
+            try await runtime.startConversation(systemPrompt: systemPrompt, contextPrefix: contextPrefix)
             isConversationActive = true
             status = "Listening..."
         } catch {

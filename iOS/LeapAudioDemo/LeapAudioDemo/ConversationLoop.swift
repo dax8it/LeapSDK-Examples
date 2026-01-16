@@ -56,6 +56,7 @@ final class ConversationLoop {
     // Conversation history with modality flags
     private var history: [ChatMessage] = []
     private var systemPrompt: String = ""
+    private var contextPrefix: String = ""  // Context to prepend to user audio
     
     // State
     private(set) var state: State = .idle
@@ -105,7 +106,7 @@ final class ConversationLoop {
     // MARK: - Public API
     
     /// Start a conversation session with the given model and system prompt
-    func start(modelRunner: ModelRunner, systemPrompt: String) throws {
+    func start(modelRunner: ModelRunner, systemPrompt: String, contextPrefix: String = "") throws {
         guard !isActive else {
             print("[ConversationLoop] Already active")
             return
@@ -115,6 +116,7 @@ final class ConversationLoop {
         
         self.modelRunner = modelRunner
         self.systemPrompt = systemPrompt
+        self.contextPrefix = contextPrefix
         self.history = [ChatMessage(role: .system, content: [.text(systemPrompt)])]
         self.shouldContinue = true
         self.isActive = true
@@ -258,9 +260,14 @@ final class ConversationLoop {
         updateState(.processing)
         generationComplete = false  // Reset for new generation
         
-        // Create audio message content
+        // Create audio message content with context prefix
         let audioContent = ChatMessageContent.fromFloatSamples(samples, sampleRate: sampleRate)
-        let userMessage = ChatMessage(role: .user, content: [audioContent])
+        var messageContent: [ChatMessageContent] = []
+        if !contextPrefix.isEmpty {
+            messageContent.append(.text(contextPrefix))
+        }
+        messageContent.append(audioContent)
+        let userMessage = ChatMessage(role: .user, content: messageContent)
         
         // LFM2.5 audio engine requires fresh conversation for each turn
         // ("messages are not replayable, need to start a new dialog")

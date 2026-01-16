@@ -266,7 +266,7 @@ final class CuratorRuntime {
     
     /// Start real-time conversational mode
     /// Model handles speech flow natively - no external VAD needed
-    func startConversation(systemPrompt: String) async throws {
+    func startConversation(systemPrompt: String, contextPrefix: String = "") async throws {
         guard let modelRunner else {
             throw NSError(domain: "CuratorRuntime", code: 2, userInfo: [NSLocalizedDescriptionKey: "Model not loaded"])
         }
@@ -276,7 +276,7 @@ final class CuratorRuntime {
         mode = .conversation
         state = .listening
         
-        try conversationLoop.start(modelRunner: modelRunner, systemPrompt: systemPrompt)
+        try conversationLoop.start(modelRunner: modelRunner, systemPrompt: systemPrompt, contextPrefix: contextPrefix)
         onStatusChange?("Listening...")
     }
     
