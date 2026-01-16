@@ -399,6 +399,10 @@ final class CuratorRuntime {
         print("[CuratorRuntime] 🧠 Generation finished, waiting for audio playback")
         isGenerating = false
         generationComplete = true
+        
+        // Signal to playback manager that generation is done - it can fire completion when buffers empty
+        playbackManager.markGenerationComplete()
+        
         onGenerationComplete?(completion)
     }
     

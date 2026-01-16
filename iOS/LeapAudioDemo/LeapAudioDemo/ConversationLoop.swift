@@ -335,6 +335,9 @@ final class ConversationLoop {
         // Mark generation as complete so playback callback knows it can resume listening
         generationComplete = true
         
+        // Signal to playback manager that generation is done - it can fire completion when buffers empty
+        playbackManager.markGenerationComplete()
+        
         // If no audio was generated, resume listening immediately
         // Otherwise, playback callback will resume listening when audio finishes
         if !hasAudio && isActive && shouldContinue {

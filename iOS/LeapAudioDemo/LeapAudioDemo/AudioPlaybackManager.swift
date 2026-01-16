@@ -10,6 +10,7 @@ final class AudioPlaybackManager {
   private var pendingBuffers = 0
   private var isPlaybackActive = false
   private var totalBuffersEnqueued = 0
+  private var generationComplete = false  // Don't fire complete until generation is done
   
   var onPlaybackComplete: (() -> Void)?
 
@@ -70,16 +71,26 @@ final class AudioPlaybackManager {
   }
   
   private func checkPlaybackComplete() {
-    queue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+    queue.asyncAfter(deadline: .now() + 0.1) { [weak self] in
       guard let self else { return }
-      if self.pendingBuffers == 0 && self.isPlaybackActive {
+      // Only fire complete if generation is done AND no pending buffers
+      if self.pendingBuffers == 0 && self.isPlaybackActive && self.generationComplete {
         print("[AudioPlaybackManager] 🔊 === PLAYBACK COMPLETE === (total buffers: \(self.totalBuffersEnqueued))")
         self.isPlaybackActive = false
         self.totalBuffersEnqueued = 0
+        self.generationComplete = false  // Reset for next generation
         DispatchQueue.main.async {
           self.onPlaybackComplete?()
         }
       }
+    }
+  }
+  
+  /// Signal that generation is complete - playback can now fire completion when buffers empty
+  func markGenerationComplete() {
+    queue.async {
+      self.generationComplete = true
+      self.checkPlaybackComplete()  // Check if we can fire now
     }
   }
 
@@ -123,6 +134,7 @@ final class AudioPlaybackManager {
       self.pendingBuffers = 0
       self.isPlaybackActive = false
       self.totalBuffersEnqueued = 0
+      self.generationComplete = false
     }
   }
 
