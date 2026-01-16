@@ -171,11 +171,14 @@ final class CuratorRuntime {
     private let inferenceQueue = DispatchQueue(label: "ai.leap.curator.inference", qos: .userInitiated)
     private var activeGenerationID: UUID?
     
-    // Output length limits to prevent runaway audio
+    // BACKPRESSURE CONFIG: Output length limits to prevent runaway audio / ggml crashes
     private let maxOutputTokens: Int = 200  // Limit response length
     private let maxPendingAudioMs: Double = 2000  // Soft stop if total buffered audio exceeds 2s
     private let maxEmittedAudioMs: Double = 6000  // Hard cap: max 6s of audio per response
     private var emittedAudioMs: Double = 0  // Track audio emitted in current response
+    
+    // GPU CONFIG: Toggle for A/B testing stability (crash may be in decoder GPU path)
+    static var audioDecoderUseGpu: Bool = false  // Set to true to test GPU-accelerated decoder
     
     var onStreamingText: ((String) -> Void)?
     var onAudioSample: (([Float], Int) -> Void)?
@@ -282,9 +285,10 @@ final class CuratorRuntime {
             nGpuLayers: 0,
             mmProjPath: mmProjPath,
             audioDecoderPath: vocoderPath,
-            audioDecoderUseGpu: false,  // Disabled for stability testing (GPU path may cause ggml crashes)
+            audioDecoderUseGpu: CuratorRuntime.audioDecoderUseGpu,  // Configurable: toggle for A/B stability testing
             audioTokenizerPath: audioTokenizerPath
         )
+        print("[CuratorRuntime] 🎛️ audioDecoderUseGpu = \(CuratorRuntime.audioDecoderUseGpu)")
         
         let runner = try Leap.load(options: options)
         modelRunner = runner
@@ -424,7 +428,7 @@ final class CuratorRuntime {
     }
     
     /// Start real-time conversational mode
-    /// Model handles speech flow natively - no external VAD needed
+    /// Uses energy/silence-based endpointing for turn detection (not ASR VAD)
     func startConversation(systemPrompt: String, contextPrefix: String = "") async throws {
         guard let modelRunner else {
             throw NSError(domain: "CuratorRuntime", code: 2, userInfo: [NSLocalizedDescriptionKey: "Model not loaded"])

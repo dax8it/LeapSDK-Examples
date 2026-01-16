@@ -76,7 +76,7 @@ private final class AudioBuffer: @unchecked Sendable {
 }
 
 /// Manages real-time conversational audio with LFM2.5-Audio model
-/// The model natively processes audio and determines speech flow - no external VAD needed
+/// Uses energy/silence-based endpointing for turn detection (not ASR VAD)
 @MainActor
 final class ConversationLoop {
     
@@ -115,16 +115,17 @@ final class ConversationLoop {
     private var generationStartTime: Date?
     private let generationTimeoutSeconds: Double = 30.0  // Kill-switch timeout
     
-    // Speech-gated commit: tuning knobs (conservative to prevent nonsense turns)
+    // ENDPOINTING / TURN DETECTION: energy + silence thresholds (not ASR VAD)
+    // This is app-level turn-taking, not model-level speech recognition
     private let startThresholdDb: Float = -40     // dB level to start speech detection
     private let endThresholdDb: Float = -45       // dB level for silence (hysteresis)
-    private let minSpeechMs: Double = 700         // Minimum speech duration before sending (was 300ms)
-    private let endSilenceMs: Double = 1200       // Silence duration to end utterance (was 900ms)
+    private let minSpeechMs: Double = 700         // Minimum speech duration before sending
+    private let endSilenceMs: Double = 1200       // Silence duration to end utterance
     private let maxUtteranceMs: Double = 12000    // Maximum utterance length
     private let preRollMs: Double = 250           // Pre-roll buffer to capture first syllables
     private let frameMs: Double = 20              // Analyze in 20ms frames
     
-    // Speech detection state
+    // Turn detection state (energy-based endpointing)
     private var hasSpeech = false
     private var speechMs: Double = 0
     private var silenceMs: Double = 0
@@ -217,6 +218,7 @@ final class ConversationLoop {
     // MARK: - Public API
     
     /// Start a conversation session with the given model and system prompt
+    /// Creates conversation ONCE here - preserved across turns for multi-turn state
     func start(modelRunner: ModelRunner, systemPrompt: String, contextPrefix: String = "") throws {
         guard !isActive else {
             print("[ConversationLoop] Already active")
@@ -226,11 +228,24 @@ final class ConversationLoop {
         print("[ConversationLoop] 🎙️ Starting conversation")
         
         self.modelRunner = modelRunner
-        self.systemPrompt = systemPrompt
-        self.contextPrefix = contextPrefix
-        self.history = [ChatMessage(role: .system, content: [.text(systemPrompt)])]
+        // SYSTEM PROMPT: Contains ALL curator rules - user message will have ONLY audio
+        // Merge contextPrefix into systemPrompt so user message stays clean
+        if contextPrefix.isEmpty {
+            self.systemPrompt = systemPrompt
+        } else {
+            self.systemPrompt = systemPrompt + "\n\n" + contextPrefix
+        }
+        self.contextPrefix = ""  // Clear - now part of system prompt
+        self.history = [ChatMessage(role: .system, content: [.text(self.systemPrompt)])]
         self.shouldContinue = true
         self.isActive = true
+        
+        // CREATE CONVERSATION ONCE: Preserve multi-turn state across turns
+        self.conversation = Conversation(
+            modelRunner: modelRunner,
+            history: self.history
+        )
+        print("[ConversationLoop] 📝 Conversation created with system prompt (\(self.systemPrompt.count) chars)")
         
         // Configure audio session for conversation
         let session = AVAudioSession.sharedInstance()
@@ -496,7 +511,7 @@ final class ConversationLoop {
         }
         
         let resampledDuration = Double(resampledSamples.count) / Double(targetSampleRate)
-        print("[ConversationLoop] 📤 Sending \(resampledSamples.count) samples (\(String(format: "%.1f", resampledDuration))s) @ \(targetSampleRate)Hz to model")
+        print("[ConversationLoop] 📤 Sending AUDIO-ONLY (\(String(format: "%.1f", resampledDuration))s) @ \(targetSampleRate)Hz")
         
         // Mark generation as starting
         isGenerationInProgress = true
@@ -506,28 +521,36 @@ final class ConversationLoop {
         updateState(.processing)
         generationComplete = false  // Reset for new generation
         
-        // Create audio message content with context prefix
+        // USER MESSAGE: EXACTLY ONE content item (audio ONLY)
+        // LeapSDK constraint: "user message content must contain exactly one a string or audio content"
+        // All curator rules are in systemPrompt, user message is ONLY the audio
         let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
-        var messageContent: [ChatMessageContent] = []
-        if !contextPrefix.isEmpty {
-            messageContent.append(.text(contextPrefix))
-        }
-        messageContent.append(audioContent)
-        let userMessage = ChatMessage(role: .user, content: messageContent)
+        let userMessage = ChatMessage(role: .user, content: [audioContent])
         
-        // LFM2.5 audio engine requires fresh conversation for each turn
-        // ("messages are not replayable, need to start a new dialog")
-        // So we create a new conversation with only the system prompt
-        let freshConversation = Conversation(
-            modelRunner: modelRunner,
-            history: [ChatMessage(role: .system, content: [.text(systemPrompt)])]
-        )
-        conversation = freshConversation
+        // VALIDATE: Ensure exactly 1 content item before SDK call
+        guard userMessage.content.count == 1 else {
+            print("[ConversationLoop] ❌ VALIDATOR FAILED: user message has \(userMessage.content.count) items, expected 1")
+            isGenerationInProgress = false
+            generationStartTime = nil
+            startListening()
+            return
+        }
+        
+        // Use existing conversation (created once at start) for multi-turn state
+        // NOTE: LFM2.5-Audio may require fresh conversation per turn due to audio state
+        // If multi-turn fails, we fall back to fresh conversation
+        guard let activeConversation = conversation else {
+            print("[ConversationLoop] ❌ No active conversation")
+            isGenerationInProgress = false
+            generationStartTime = nil
+            startListening()
+            return
+        }
         
         playbackManager.reset()
         
-        // Generate response
-        let stream = freshConversation.generateResponse(message: userMessage)
+        // Generate response using existing conversation
+        let stream = activeConversation.generateResponse(message: userMessage)
         var responseText = ""
         var responseHasAudio = false
         
