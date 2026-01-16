@@ -110,9 +110,23 @@ final class ConversationLoop {
     private var shouldContinue = true
     private var generationComplete = false  // Track if model finished generating
     
-    // Timing for chunked streaming
-    private var lastSendTime: Date?
-    private let chunkInterval: TimeInterval = 2.0  // Send audio every 2 seconds
+    // Speech-gated commit: tuning knobs
+    private let startThresholdDb: Float = -40     // dB level to start speech detection
+    private let endThresholdDb: Float = -45       // dB level for silence (hysteresis)
+    private let minSpeechMs: Double = 300         // Minimum speech duration before sending
+    private let endSilenceMs: Double = 900        // Silence duration to end utterance
+    private let maxUtteranceMs: Double = 12000    // Maximum utterance length
+    private let preRollMs: Double = 250           // Pre-roll buffer to capture first syllables
+    private let frameMs: Double = 20              // Analyze in 20ms frames
+    
+    // Speech detection state
+    private var hasSpeech = false
+    private var speechMs: Double = 0
+    private var silenceMs: Double = 0
+    private var utteranceStart: Date?
+    private var preRollBuffer: [Float] = []       // Last 250ms to capture first syllables
+    private var sendBuffer: [Float] = []          // Buffer to send to model
+    private var analysisBuffer: [Float] = []      // Buffer for frame analysis
     
     // MARK: - Callbacks
     
@@ -192,6 +206,8 @@ final class ConversationLoop {
         playbackManager.reset()
         
         audioBuffer.clear()
+        resetUtteranceState()
+        preRollBuffer.removeAll()
         
         history.removeAll()
         conversation = nil
@@ -228,9 +244,12 @@ final class ConversationLoop {
             engine.prepare()
             try engine.start()
             
-            lastSendTime = Date()
+            // Reset speech detection state for new listening session
+            resetUtteranceState()
+            preRollBuffer.removeAll()
+            
             updateState(.listening)
-            print("[ConversationLoop] 🎤 Listening (sampleRate: \(audioBuffer.sampleRate))")
+            print("[ConversationLoop] 🎤 Listening (sampleRate: \(audioBuffer.sampleRate), speech threshold: \(startThresholdDb)dB)")
             
         } catch {
             print("[ConversationLoop] ❌ Failed to start listening: \(error)")
@@ -259,15 +278,62 @@ final class ConversationLoop {
             self.onAudioLevel?(min(rms * 5, 1.0))
         }
         
-        // Accumulate samples in thread-safe buffer
-        audioBuffer.append(samples)
+        // Add samples to analysis buffer for speech detection
+        analysisBuffer.append(contentsOf: samples)
         
-        // Check if it's time to send a chunk to the model
-        // The model will internally determine if there's meaningful speech
-        let now = Date()
-        if let lastSend = lastSendTime, now.timeIntervalSince(lastSend) >= chunkInterval {
-            Task { @MainActor in
-                self.sendAudioToModel()
+        // Maintain pre-roll buffer (last ~250ms at source sample rate)
+        let sourceSampleRate = audioBuffer.sampleRate
+        let preRollSamples = Int(sourceSampleRate * preRollMs / 1000.0)
+        preRollBuffer.append(contentsOf: samples)
+        if preRollBuffer.count > preRollSamples {
+            preRollBuffer.removeFirst(preRollBuffer.count - preRollSamples)
+        }
+        
+        // Analyze in frames (20ms at source sample rate)
+        let frameSize = Int(sourceSampleRate * frameMs / 1000.0)
+        
+        while analysisBuffer.count >= frameSize {
+            let frame = Array(analysisBuffer.prefix(frameSize))
+            analysisBuffer.removeFirst(frameSize)
+            
+            let db = rmsToDb(frame)
+            
+            if !hasSpeech {
+                // Not in speech yet - check if speech started
+                if db > startThresholdDb {
+                    hasSpeech = true
+                    utteranceStart = Date()
+                    speechMs = frameMs
+                    silenceMs = 0
+                    
+                    // Start send buffer with pre-roll + current frame
+                    sendBuffer = preRollBuffer + frame
+                    print("[ConversationLoop] 🎙️ Speech started (dB: \(String(format: "%.1f", db)))")
+                }
+                // No speech yet - don't accumulate anything
+            } else {
+                // Already in utterance - accumulate
+                sendBuffer.append(contentsOf: frame)
+                
+                if db > endThresholdDb {
+                    speechMs += frameMs
+                    silenceMs = 0
+                } else {
+                    silenceMs += frameMs
+                }
+                
+                let utteranceMs = Date().timeIntervalSince(utteranceStart ?? Date()) * 1000.0
+                
+                // Check if utterance should end
+                let silenceEnded = silenceMs >= endSilenceMs && speechMs >= minSpeechMs
+                let maxReached = utteranceMs >= maxUtteranceMs
+                
+                if silenceEnded || maxReached {
+                    let reason = maxReached ? "max duration" : "silence detected"
+                    print("[ConversationLoop] 🎙️ Speech ended (\(reason), speech: \(Int(speechMs))ms, silence: \(Int(silenceMs))ms)")
+                    commitUtterance()
+                    return
+                }
             }
         }
     }
@@ -278,19 +344,39 @@ final class ConversationLoop {
         return sqrt(sumOfSquares / Float(samples.count))
     }
     
-    // MARK: - Model Interaction
+    private func rmsToDb(_ samples: [Float]) -> Float {
+        guard !samples.isEmpty else { return -100 }
+        var sum: Float = 0
+        for s in samples { sum += s * s }
+        let mean = max(sum / Float(samples.count), 1e-12)
+        return 10 * log10(mean)
+    }
     
-    private func sendAudioToModel() {
-        let samplesToSend = audioBuffer.flush()
+    private func commitUtterance() {
+        guard !sendBuffer.isEmpty, speechMs >= minSpeechMs else {
+            print("[ConversationLoop] ⚠️ Utterance too short (\(Int(speechMs))ms), discarding")
+            resetUtteranceState()
+            return
+        }
+        
+        let samplesToSend = sendBuffer
         let rate = Int(audioBuffer.sampleRate)
         
-        guard !samplesToSend.isEmpty else { return }
+        // Reset state before sending
+        resetUtteranceState()
         
-        lastSendTime = Date()
-        
-        Task {
+        Task { @MainActor in
             await self.processUserAudio(samples: samplesToSend, sampleRate: rate)
         }
+    }
+    
+    private func resetUtteranceState() {
+        hasSpeech = false
+        speechMs = 0
+        silenceMs = 0
+        utteranceStart = nil
+        sendBuffer.removeAll(keepingCapacity: true)
+        analysisBuffer.removeAll(keepingCapacity: true)
     }
     
     private func processUserAudio(samples: [Float], sampleRate: Int) async {
