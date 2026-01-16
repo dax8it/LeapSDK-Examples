@@ -1,6 +1,52 @@
 import AVFoundation
+import Accelerate
 import Foundation
 import LeapSDK
+
+/// Resamples audio to the model's expected format (16kHz mono Float32)
+enum AudioResampler {
+    
+    /// Target sample rate expected by LFM2.5-Audio model
+    static let modelSampleRate: Int = 16000
+    
+    /// Resample audio from source rate to 16kHz mono
+    static func resampleTo16kHz(samples: [Float], sourceSampleRate: Int) -> [Float]? {
+        guard sourceSampleRate != modelSampleRate else { return samples }
+        guard !samples.isEmpty else { return [] }
+        
+        let ratio = Double(modelSampleRate) / Double(sourceSampleRate)
+        let outputLength = Int(Double(samples.count) * ratio)
+        guard outputLength > 0 else { return [] }
+        
+        var output = [Float](repeating: 0, count: outputLength)
+        let step = Float(samples.count - 1) / Float(outputLength - 1)
+        
+        for i in 0..<outputLength {
+            let srcIndex = Float(i) * step
+            let srcIndexInt = Int(srcIndex)
+            let fraction = srcIndex - Float(srcIndexInt)
+            
+            if srcIndexInt >= samples.count - 1 {
+                output[i] = samples[samples.count - 1]
+            } else {
+                output[i] = samples[srcIndexInt] * (1 - fraction) + samples[srcIndexInt + 1] * fraction
+            }
+        }
+        
+        // Remove DC offset
+        var mean: Float = 0
+        vDSP_meanv(output, 1, &mean, vDSP_Length(output.count))
+        var negativeMean = -mean
+        var dcRemoved = [Float](repeating: 0, count: output.count)
+        vDSP_vsadd(output, 1, &negativeMean, &dcRemoved, 1, vDSP_Length(output.count))
+        
+        let inputDuration = Double(samples.count) / Double(sourceSampleRate)
+        let outputDuration = Double(dcRemoved.count) / Double(modelSampleRate)
+        print("[AudioResampler] \(samples.count)@\(sourceSampleRate)Hz → \(dcRemoved.count)@\(modelSampleRate)Hz (\(String(format: "%.2f", inputDuration))s)")
+        
+        return dcRemoved
+    }
+}
 
 /// Thread-safe audio buffer for collecting samples from audio tap
 private final class AudioBuffer: @unchecked Sendable {
@@ -254,14 +300,31 @@ final class ConversationLoop {
         let duration = Double(samples.count) / Double(sampleRate)
         guard duration > 0.1 else { return }
         
-        print("[ConversationLoop] 📤 Sending \(samples.count) samples (\(String(format: "%.1f", duration))s) to model")
+        // Resample to 16kHz (model's expected rate) if needed
+        let resampledSamples: [Float]
+        let targetSampleRate: Int
+        
+        if sampleRate != AudioResampler.modelSampleRate {
+            guard let resampled = AudioResampler.resampleTo16kHz(samples: samples, sourceSampleRate: sampleRate) else {
+                print("[ConversationLoop] ❌ Failed to resample audio")
+                return
+            }
+            resampledSamples = resampled
+            targetSampleRate = AudioResampler.modelSampleRate
+        } else {
+            resampledSamples = samples
+            targetSampleRate = sampleRate
+        }
+        
+        let resampledDuration = Double(resampledSamples.count) / Double(targetSampleRate)
+        print("[ConversationLoop] 📤 Sending \(resampledSamples.count) samples (\(String(format: "%.1f", resampledDuration))s) @ \(targetSampleRate)Hz to model")
         
         stopListening()
         updateState(.processing)
         generationComplete = false  // Reset for new generation
         
         // Create audio message content with context prefix
-        let audioContent = ChatMessageContent.fromFloatSamples(samples, sampleRate: sampleRate)
+        let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
         var messageContent: [ChatMessageContent] = []
         if !contextPrefix.isEmpty {
             messageContent.append(.text(contextPrefix))

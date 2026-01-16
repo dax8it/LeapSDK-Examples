@@ -208,7 +208,7 @@ final class MultiGalleryAudioStore {
     func getConversationContextPrefix() -> String {
         guard let store = libraryStore else { return "" }
         
-        var prefix = "You are an AI art curator assistant for photographer Alex Covo. Never claim to BE Alex Covo. Speak as his curator. Be concise.\n"
+        var prefix = "You are an AI art curator assistant for photographer Alex Covo. Never say 'I am Alex Covo' or 'I'm Alex Covo'. Always refer to Alex in third person. Be concise.\n"
         
         switch currentContext {
         case .home:
@@ -234,7 +234,7 @@ final class MultiGalleryAudioStore {
             }
         }
         
-        return prefix + "User audio follows:"
+        return prefix
     }
     
     func setupModel() async {
@@ -405,11 +405,28 @@ final class MultiGalleryAudioStore {
             return
         }
         
+        // Resample to 16kHz (model's expected rate) if needed
+        let resampledSamples: [Float]
+        let targetSampleRate: Int
+        
+        if sampleRate != AudioResampler.modelSampleRate {
+            guard let resampled = AudioResampler.resampleTo16kHz(samples: samples, sourceSampleRate: sampleRate) else {
+                status = "Failed to process audio."
+                print("[MultiGalleryAudioStore] ❌ Failed to resample audio")
+                return
+            }
+            resampledSamples = resampled
+            targetSampleRate = AudioResampler.modelSampleRate
+        } else {
+            resampledSamples = samples
+            targetSampleRate = sampleRate
+        }
+        
         let contextPacket = buildContextPacket()
         let instructions = getCuratorInstructions()
-        let fullContext = "\(instructions)\n\n\(contextPacket)\n\nUser voice question follows:"
+        let fullContext = "\(instructions)\n\n\(contextPacket)"
         
-        let audioContent = ChatMessageContent.fromFloatSamples(samples, sampleRate: sampleRate)
+        let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
         let textContent = ChatMessageContent.text(fullContext)
         
         let chatMessage = ChatMessage(role: .user, content: [textContent, audioContent])
