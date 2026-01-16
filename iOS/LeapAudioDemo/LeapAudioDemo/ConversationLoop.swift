@@ -110,6 +110,11 @@ final class ConversationLoop {
     private var shouldContinue = true
     private var generationComplete = false  // Track if model finished generating
     
+    // Single-flight generation protection
+    private var isGenerationInProgress = false
+    private var generationStartTime: Date?
+    private let generationTimeoutSeconds: Double = 30.0  // Kill-switch timeout
+    
     // Speech-gated commit: tuning knobs
     private let startThresholdDb: Float = -40     // dB level to start speech detection
     private let endThresholdDb: Float = -45       // dB level for silence (hysteresis)
@@ -199,6 +204,8 @@ final class ConversationLoop {
         shouldContinue = false
         isActive = false
         generationComplete = false
+        isGenerationInProgress = false
+        generationStartTime = nil
         
         stopListening()
         conversationTask?.cancel()
@@ -218,6 +225,11 @@ final class ConversationLoop {
     /// Interrupt the current response (e.g., user wants to speak)
     func interrupt() {
         print("[ConversationLoop] ⚡ Interrupting")
+        
+        // Clear generation state
+        isGenerationInProgress = false
+        generationStartTime = nil
+        
         conversationTask?.cancel()
         playbackManager.reset()
         
@@ -382,6 +394,12 @@ final class ConversationLoop {
     private func processUserAudio(samples: [Float], sampleRate: Int) async {
         guard let modelRunner, isActive else { return }
         
+        // SINGLE-FLIGHT: Block if generation already in progress
+        if isGenerationInProgress {
+            print("[ConversationLoop] ⚠️ Generation already in progress, dropping audio")
+            return
+        }
+        
         // Minimum audio threshold (skip very short/quiet audio)
         let duration = Double(samples.count) / Double(sampleRate)
         guard duration > 0.1 else { return }
@@ -404,6 +422,10 @@ final class ConversationLoop {
         
         let resampledDuration = Double(resampledSamples.count) / Double(targetSampleRate)
         print("[ConversationLoop] 📤 Sending \(resampledSamples.count) samples (\(String(format: "%.1f", resampledDuration))s) @ \(targetSampleRate)Hz to model")
+        
+        // Mark generation as starting
+        isGenerationInProgress = true
+        generationStartTime = Date()
         
         stopListening()
         updateState(.processing)
@@ -441,6 +463,20 @@ final class ConversationLoop {
                 for try await event in stream {
                     if Task.isCancelled { break }
                     
+                    // Check 30s timeout kill-switch
+                    if let startTime = await MainActor.run(body: { self.generationStartTime }),
+                       Date().timeIntervalSince(startTime) > self.generationTimeoutSeconds {
+                        print("[ConversationLoop] ⏰ Generation timeout (30s), forcing stop")
+                        await MainActor.run {
+                            self.isGenerationInProgress = false
+                            self.generationStartTime = nil
+                            if self.isActive && self.shouldContinue {
+                                self.startListening()
+                            }
+                        }
+                        return
+                    }
+                    
                     await MainActor.run {
                         switch event {
                         case .chunk(let text):
@@ -469,6 +505,8 @@ final class ConversationLoop {
             } catch {
                 print("[ConversationLoop] ❌ Generation error: \(error)")
                 await MainActor.run {
+                    self.isGenerationInProgress = false
+                    self.generationStartTime = nil
                     self.onError?(error)
                     if self.isActive && self.shouldContinue {
                         self.startListening()
@@ -480,6 +518,10 @@ final class ConversationLoop {
     
     private func handleCompletion(_ completion: MessageCompletion, responseText: String, hasAudio: Bool) {
         print("[ConversationLoop] ✅ Response complete (hasAudio: \(hasAudio), text: \(responseText.prefix(50))...)")
+        
+        // Clear single-flight lock
+        isGenerationInProgress = false
+        generationStartTime = nil
         
         // Mark generation as complete so playback callback knows it can resume listening
         generationComplete = true

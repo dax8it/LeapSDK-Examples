@@ -7,13 +7,30 @@ actor GenerationCoordinator {
     private(set) var currentGenerationTask: Task<Void, Never>?
     private(set) var isAcceptingAudioFrames = true
     private(set) var generationID: UUID?
+    private(set) var isGenerationActive = false  // Strict single-flight flag
+    private var generationStartTime: Date?
     
-    /// Start a new generation, cancelling any existing one first
-    func beginGeneration() -> UUID {
+    /// Generation timeout in seconds
+    private let generationTimeoutSeconds: Double = 30.0
+    
+    /// Check if generation is currently active (blocks new generations and resets)
+    var isActive: Bool { isGenerationActive }
+    
+    /// Start a new generation, blocking if one is already running
+    /// Returns nil if generation is already active (caller should not proceed)
+    func tryBeginGeneration() async -> UUID? {
+        // STRICT SINGLE-FLIGHT: Block if generation is already active
+        if isGenerationActive {
+            print("[GenerationCoordinator] ⚠️ Generation already active, blocking new request")
+            return nil
+        }
+        
         // Block new audio frames during transition
         isAcceptingAudioFrames = false
+        isGenerationActive = true
+        generationStartTime = Date()
         
-        // Cancel existing generation
+        // Cancel any lingering task (shouldn't happen, but safety)
         currentGenerationTask?.cancel()
         currentGenerationTask = nil
         
@@ -47,15 +64,42 @@ actor GenerationCoordinator {
         return true
     }
     
+    /// Check if generation has exceeded timeout
+    func hasExceededTimeout() -> Bool {
+        guard let startTime = generationStartTime else { return false }
+        return Date().timeIntervalSince(startTime) > generationTimeoutSeconds
+    }
+    
     /// End generation and prepare for next
     func endGeneration(id: UUID) {
         guard generationID == id else { return }
         print("[GenerationCoordinator] 🏁 Ending generation \(id.uuidString.prefix(8))")
         currentGenerationTask = nil
+        isGenerationActive = false
+        generationStartTime = nil
+    }
+    
+    /// Force end generation (for timeout or error cases)
+    func forceEndGeneration() {
+        let genID = generationID?.uuidString.prefix(8) ?? "nil"
+        print("[GenerationCoordinator] ⚠️ Force ending generation \(genID)")
+        currentGenerationTask?.cancel()
+        currentGenerationTask = nil
+        generationID = nil
+        isGenerationActive = false
+        isAcceptingAudioFrames = false
+        generationStartTime = nil
     }
     
     /// Two-phase reset: safely tear down with no in-flight frames
-    func prepareForReset() async {
+    /// Returns false if reset should be blocked (generation active)
+    func prepareForReset() async -> Bool {
+        // BLOCK RESET DURING ACTIVE GENERATION
+        if isGenerationActive {
+            print("[GenerationCoordinator] ⚠️ Cannot reset during active generation - wait for completion")
+            return false
+        }
+        
         print("[GenerationCoordinator] 🔄 Preparing for reset (phase 1: block frames)")
         isAcceptingAudioFrames = false
         
@@ -71,12 +115,15 @@ actor GenerationCoordinator {
         currentGenerationTask = nil
         generationID = nil
         print("[GenerationCoordinator] 🔄 Reset prepared (phase 1 complete)")
+        return true
     }
     
     /// Complete reset after buffers are cleared
     func completeReset() {
         print("[GenerationCoordinator] 🔄 Reset complete (phase 2: ready for new generation)")
         isAcceptingAudioFrames = true
+        isGenerationActive = false
+        generationStartTime = nil
     }
 }
 
@@ -234,14 +281,23 @@ final class CuratorRuntime {
         onStatusChange?("Ready")
     }
     
-    func hardReset() async {
-        print("[CuratorRuntime] 🔄 === HARD RESET START ===")
+    func hardReset(force: Bool = false) async {
+        print("[CuratorRuntime] 🔄 === HARD RESET START === (force=\(force))")
         print("[CuratorRuntime] Current mode=\(mode.rawValue), state=\(state.rawValue)")
         
         let previousMode = mode
         
         // PHASE 1: Block audio frames and cancel generation safely
-        await generationCoordinator.prepareForReset()
+        // If force=true, we force-end any active generation first
+        if force {
+            await generationCoordinator.forceEndGeneration()
+        }
+        
+        let canReset = await generationCoordinator.prepareForReset()
+        if !canReset {
+            print("[CuratorRuntime] ⚠️ Reset blocked - generation still active. Use force=true to override.")
+            return
+        }
         
         // Stop conversation loop if active
         if conversationLoop.isActive {
@@ -401,12 +457,11 @@ final class CuratorRuntime {
             return
         }
         
-        // Use GenerationCoordinator for single-flight generation
-        let genID = await generationCoordinator.beginGeneration()
-        
-        if isGenerating {
-            print("[CuratorRuntime] ⚠️ Already generating, cancelling previous...")
-            await cancelGeneration()
+        // STRICT SINGLE-FLIGHT: Try to begin generation, block if already active
+        guard let genID = await generationCoordinator.tryBeginGeneration() else {
+            print("[CuratorRuntime] ⚠️ Generation blocked - another generation is active")
+            onStatusChange?("Busy...")
+            return
         }
         
         activeGenerationID = genID
@@ -441,6 +496,19 @@ final class CuratorRuntime {
                     if Task.isCancelled || shouldStop {
                         print("[CuratorRuntime] 🧠 Generation stopped (id=\(genID.uuidString.prefix(8)), tokens=\(tokenCount))")
                         break
+                    }
+                    
+                    // Check 30s timeout kill-switch
+                    let timedOut = await self.generationCoordinator.hasExceededTimeout()
+                    if timedOut {
+                        print("[CuratorRuntime] ⏰ Generation timeout (30s), forcing stop")
+                        await self.generationCoordinator.forceEndGeneration()
+                        await MainActor.run {
+                            self.isGenerating = false
+                            self.state = .idle
+                            self.onStatusChange?("Timeout")
+                        }
+                        return
                     }
                     
                     // Check with coordinator if we should accept this frame
