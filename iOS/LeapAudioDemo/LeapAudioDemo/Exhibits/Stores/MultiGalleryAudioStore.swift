@@ -199,17 +199,54 @@ final class MultiGalleryAudioStore {
         return "Respond with interleaved text and audio."
     }
     
-    /// Full system prompt for conversation mode (context must be in system prompt)
+    /// Compact system prompt for conversation mode (~150 tokens vs ~470)
     private func getConversationSystemPrompt() -> String {
-        let contextPacket = buildContextPacket()
-        let instructions = getCuratorInstructions()
+        let context = buildCompactContext()
         return """
-        Respond with interleaved text and audio.
+        Respond with interleaved text and audio. You are Alex Covo's photography curator. Be concise. Use ONLY provided context.
         
-        \(instructions)
-        
-        \(contextPacket)
+        \(context)
         """
+    }
+    
+    /// Compact context for conversation mode - essential info only, no app guide
+    private func buildCompactContext() -> String {
+        guard let store = libraryStore else { return "[No context]" }
+        
+        switch currentContext {
+        case .home:
+            var lines = ["[Artist: Alex Covo | Fashion & street photography]"]
+            let galleries = store.exhibits.prefix(5).map { $0.title }
+            lines.append("[Galleries: \(galleries.joined(separator: ", "))]")
+            return lines.joined(separator: "\n")
+            
+        case .galleriesOverview:
+            var lines = ["[Artist: Alex Covo]"]
+            for exhibit in store.exhibits.prefix(5) {
+                lines.append("• \(exhibit.title): \(String(exhibit.shortStatement.prefix(50)))")
+            }
+            return lines.joined(separator: "\n")
+            
+        case .exhibit(let exhibit):
+            var lines = ["[Gallery: \(exhibit.title)]"]
+            lines.append("Theme: \(String(exhibit.shortStatement.prefix(80)))")
+            let titles = store.activeWorks.compactMap { $0.title.isEmpty ? nil : $0.title }.prefix(6)
+            if !titles.isEmpty {
+                lines.append("Works: \(titles.joined(separator: ", "))")
+            }
+            return lines.joined(separator: "\n")
+            
+        case .artwork(let exhibit, let artwork):
+            var lines = ["[Gallery: \(exhibit.title)]"]
+            lines.append("[Work: \(artwork.displayTitle)]")
+            if !artwork.summary.isEmpty {
+                lines.append(String(artwork.summary.prefix(100)))
+            }
+            if !artwork.story.isEmpty {
+                lines.append(String(artwork.story.prefix(100)))
+            }
+            return lines.joined(separator: "\n")
+        }
     }
     
     func setupModel() async {
