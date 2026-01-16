@@ -182,22 +182,35 @@ final class ConversationLoop {
         // Phase 1: Initial delay (250ms)
         try? await Task.sleep(nanoseconds: 250_000_000)
         
-        // Phase 2: Wait for playback to be idle (up to 2s timeout)
-        let maxWaitIterations = 20  // 20 x 100ms = 2s max
+        // Phase 2: Wait for playbackActive == false (counter-based, up to 500ms timeout)
+        let maxWaitIterations = 5  // 5 x 100ms = 500ms max
+        var forceReset = false
         for i in 0..<maxWaitIterations {
-            if playbackManager.isIdle {
-                print("[ConversationLoop] 🔄 Drain barrier: playback idle after \(i * 100)ms")
+            if !playbackManager.playbackActive {
+                print("[ConversationLoop] 🔄 Drain barrier: playbackActive=false after \(i * 100)ms")
                 break
+            }
+            if i == maxWaitIterations - 1 {
+                // 500ms timeout reached, force reset
+                forceReset = true
             }
             try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
         }
         
-        // Phase 3: Additional settling time (200ms no-activity buffer)
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        // Phase 3: If still active after 500ms, force stop and reset
+        if forceReset || playbackManager.playbackActive {
+            print("[ConversationLoop] ⚠️ Drain barrier: playbackActive still true after 500ms, forcing stop+reset")
+            playbackManager.stop()
+            playbackManager.reset()
+            try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms settle after force reset
+        }
         
-        // Final idle check
-        if !playbackManager.isIdle {
-            print("[ConversationLoop] ⚠️ Drain barrier: playback not idle after timeout, proceeding anyway")
+        // Phase 4: Additional settling time (100ms)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        
+        // Final verification
+        if playbackManager.playbackActive {
+            print("[ConversationLoop] ⚠️ Drain barrier: playbackActive STILL true after force reset - proceeding anyway")
         }
     }
     

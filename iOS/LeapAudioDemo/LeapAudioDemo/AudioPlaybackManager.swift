@@ -10,8 +10,7 @@ final class AudioPlaybackManager {
   
   private var format: AVAudioFormat?
   private var sessionConfigured = false
-  private var pendingBuffers = 0
-  private var isPlaybackActive = false
+  private var scheduledFrameCount = 0  // Counter-based playback tracking (incremented on schedule, decremented on completion)
   private var totalBuffersEnqueued = 0
   private var generationComplete = false
   
@@ -74,7 +73,7 @@ final class AudioPlaybackManager {
   /// Log current buffer depth for diagnostics
   private func logBufferDepth() {
     let bufferedMs = Double(sampleBuffer.count) / Double(currentSampleRate) * 1000.0
-    let pendingMs = Double(pendingBuffers * frameSize) / Double(currentSampleRate) * 1000.0
+    let pendingMs = Double(scheduledFrameCount * frameSize) / Double(currentSampleRate) * 1000.0
     let totalMs = bufferedMs + pendingMs
     let status = isInRefillMode ? "REFILL" : "OK"
     
@@ -102,8 +101,7 @@ final class AudioPlaybackManager {
     
     // Clear all state
     sampleBuffer.removeAll()
-    pendingBuffers = 0
-    isPlaybackActive = false
+    scheduledFrameCount = 0
     hasStartedPlayback = false
     isInRefillMode = false
     generationComplete = false
@@ -121,23 +119,33 @@ final class AudioPlaybackManager {
     stopDiagnosticLogging()
   }
   
+  /// Counter-based playback active check (more reliable than playerNode.isPlaying)
   var isPlaying: Bool {
-    return isPlaybackActive || player.isPlaying
+    queue.sync {
+      return scheduledFrameCount > 0 || !sampleBuffer.isEmpty
+    }
+  }
+  
+  /// Reliable playback active state based on scheduled frame counter
+  var playbackActive: Bool {
+    queue.sync {
+      return scheduledFrameCount > 0
+    }
   }
   
   /// Total pending audio duration in milliseconds (for output length limiting)
   var pendingDurationMs: Double {
     queue.sync {
       let bufferedMs = Double(sampleBuffer.count) / Double(currentSampleRate) * 1000.0
-      let pendingMs = Double(pendingBuffers * frameSize) / Double(currentSampleRate) * 1000.0
+      let pendingMs = Double(scheduledFrameCount * frameSize) / Double(currentSampleRate) * 1000.0
       return bufferedMs + pendingMs
     }
   }
   
-  /// Check if playback is completely idle (no pending buffers, no queued samples)
+  /// Check if playback is completely idle (no scheduled frames, no queued samples)
   var isIdle: Bool {
     queue.sync {
-      return sampleBuffer.isEmpty && pendingBuffers == 0 && !isPlaybackActive
+      return sampleBuffer.isEmpty && scheduledFrameCount == 0
     }
   }
 
@@ -155,7 +163,6 @@ final class AudioPlaybackManager {
       
       self.configureSessionIfNeeded(sampleRate: Double(sampleRate))
       self.currentSampleRate = sampleRate
-      self.isPlaybackActive = true
       
       // Append incoming samples to ring buffer
       self.sampleBuffer.append(contentsOf: samples)
@@ -221,12 +228,12 @@ final class AudioPlaybackManager {
         }
       }
       
-      pendingBuffers += 1
+      scheduledFrameCount += 1
       totalBuffersEnqueued += 1
       
       player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
         self?.queue.async {
-          self?.pendingBuffers -= 1
+          self?.scheduledFrameCount -= 1
           self?.lastProgressTime = Date()  // Track progress for stuck detection
           self?.checkPlaybackComplete()
         }
@@ -240,11 +247,10 @@ final class AudioPlaybackManager {
   }
   
   private func checkPlaybackComplete() {
-    // Only fire complete if generation is done AND no pending buffers AND buffer is drained
-    if pendingBuffers == 0 && isPlaybackActive && generationComplete && sampleBuffer.count < frameSize {
+    // Only fire complete if generation is done AND scheduledFrameCount == 0 AND buffer is drained
+    if scheduledFrameCount == 0 && generationComplete && sampleBuffer.count < frameSize {
       print("[AudioPlaybackManager] 🔊 === PLAYBACK COMPLETE === (total frames: \(totalBuffersEnqueued))")
       stopDiagnosticLogging()
-      isPlaybackActive = false
       totalBuffersEnqueued = 0
       generationComplete = false
       hasStartedPlayback = false
@@ -282,12 +288,12 @@ final class AudioPlaybackManager {
           }
         }
         
-        self.pendingBuffers += 1
+        self.scheduledFrameCount += 1
         self.totalBuffersEnqueued += 1
         
         self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
           self?.queue.async {
-            self?.pendingBuffers -= 1
+            self?.scheduledFrameCount -= 1
             self?.checkPlaybackComplete()
           }
         }
@@ -332,15 +338,22 @@ final class AudioPlaybackManager {
     }
   }
 
+  /// Stop playback immediately (without full reset)
+  func stop() {
+    queue.async {
+      print("[AudioPlaybackManager] 🛑 === STOP === (scheduledFrames: \(self.scheduledFrameCount))")
+      self.player.stop()
+    }
+  }
+
   func reset() {
     queue.async {
-      print("[AudioPlaybackManager] 🔇 === RESET === (pending: \(self.pendingBuffers), buffered: \(self.sampleBuffer.count))")
+      print("[AudioPlaybackManager] 🔇 === RESET === (scheduledFrames: \(self.scheduledFrameCount), buffered: \(self.sampleBuffer.count))")
       self.stopDiagnosticLogging()
       self.player.stop()
       self.player.reset()
       self.format = nil
-      self.pendingBuffers = 0
-      self.isPlaybackActive = false
+      self.scheduledFrameCount = 0
       self.totalBuffersEnqueued = 0
       self.generationComplete = false
       self.hasStartedPlayback = false
