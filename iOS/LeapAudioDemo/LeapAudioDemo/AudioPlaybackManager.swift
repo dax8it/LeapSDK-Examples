@@ -26,12 +26,53 @@ final class AudioPlaybackManager {
   private var jitterBufferSamples: Int { Int(Double(currentSampleRate) * jitterBufferMs / 1000.0) }
   private var hasStartedPlayback = false
   
+  // Hysteresis: refill mode to prevent stutter oscillation
+  private let refillThresholdMs: Double = 120  // Enter refill mode if buffer dips below this
+  private var refillThresholdSamples: Int { Int(Double(currentSampleRate) * refillThresholdMs / 1000.0) }
+  private var isInRefillMode = false
+  
+  // Max queue cap to prevent runaway latency (backpressure)
+  private let maxQueueMs: Double = 1500  // 1.5 seconds max
+  private var maxQueueSamples: Int { Int(Double(currentSampleRate) * maxQueueMs / 1000.0) }
+  
+  // Diagnostic logging
+  private var logTimer: DispatchSourceTimer?
+  private var lastLogTime: Date = Date()
+  
   var onPlaybackComplete: (() -> Void)?
 
   init() {
-    print("[AudioPlaybackManager] 🔊 Initializing (frame-based buffering)")
+    print("[AudioPlaybackManager] 🔊 Initializing (frame-based buffering with hysteresis)")
     engine.attach(player)
     engine.connect(player, to: engine.mainMixerNode, format: nil)
+  }
+  
+  /// Start diagnostic logging (call when playback begins)
+  private func startDiagnosticLogging() {
+    guard logTimer == nil else { return }
+    
+    let timer = DispatchSource.makeTimerSource(queue: queue)
+    timer.schedule(deadline: .now(), repeating: .milliseconds(250))
+    timer.setEventHandler { [weak self] in
+      self?.logBufferDepth()
+    }
+    timer.resume()
+    logTimer = timer
+  }
+  
+  /// Stop diagnostic logging
+  private func stopDiagnosticLogging() {
+    logTimer?.cancel()
+    logTimer = nil
+  }
+  
+  /// Log current buffer depth for diagnostics
+  private func logBufferDepth() {
+    let bufferedMs = Double(sampleBuffer.count) / Double(currentSampleRate) * 1000.0
+    let pendingMs = Double(pendingBuffers * frameSize) / Double(currentSampleRate) * 1000.0
+    let totalMs = bufferedMs + pendingMs
+    let status = isInRefillMode ? "REFILL" : "OK"
+    print("[AudioPlaybackManager] 📊 Buffer: \(Int(bufferedMs))ms queued + \(Int(pendingMs))ms pending = \(Int(totalMs))ms total [\(status)]")
   }
   
   var isPlaying: Bool {
@@ -57,16 +98,38 @@ final class AudioPlaybackManager {
       // Append incoming samples to ring buffer
       self.sampleBuffer.append(contentsOf: samples)
       
+      // Backpressure: cap queue at max to prevent runaway latency
+      if self.sampleBuffer.count > self.maxQueueSamples {
+        let excess = self.sampleBuffer.count - self.maxQueueSamples
+        self.sampleBuffer.removeFirst(excess)
+        print("[AudioPlaybackManager] ⚠️ Backpressure: dropped \(excess) oldest samples (queue capped at \(self.maxQueueMs)ms)")
+      }
+      
       // Check if we have enough for jitter buffer (first time only)
       if !self.hasStartedPlayback {
         if self.sampleBuffer.count >= self.jitterBufferSamples {
           print("[AudioPlaybackManager] 🔊 === PLAYBACK START === (jitter buffer filled: \(self.sampleBuffer.count) samples)")
           self.hasStartedPlayback = true
+          self.isInRefillMode = false
+          self.startDiagnosticLogging()
+          self.drainBufferToFrames()
+        }
+      } else if self.isInRefillMode {
+        // In refill mode: wait until we reach jitter buffer threshold again
+        if self.sampleBuffer.count >= self.jitterBufferSamples {
+          print("[AudioPlaybackManager] 🔄 Exiting refill mode (buffer restored to \(self.sampleBuffer.count) samples)")
+          self.isInRefillMode = false
           self.drainBufferToFrames()
         }
       } else {
-        // Already playing, drain available frames
+        // Normal mode: drain available frames
         self.drainBufferToFrames()
+        
+        // Check if we need to enter refill mode (hysteresis)
+        if self.sampleBuffer.count < self.refillThresholdSamples && self.sampleBuffer.count > 0 {
+          print("[AudioPlaybackManager] 🔄 Entering refill mode (buffer low: \(self.sampleBuffer.count) samples)")
+          self.isInRefillMode = true
+        }
       }
     }
   }
@@ -115,10 +178,12 @@ final class AudioPlaybackManager {
     // Only fire complete if generation is done AND no pending buffers AND buffer is drained
     if pendingBuffers == 0 && isPlaybackActive && generationComplete && sampleBuffer.count < frameSize {
       print("[AudioPlaybackManager] 🔊 === PLAYBACK COMPLETE === (total frames: \(totalBuffersEnqueued))")
+      stopDiagnosticLogging()
       isPlaybackActive = false
       totalBuffersEnqueued = 0
       generationComplete = false
       hasStartedPlayback = false
+      isInRefillMode = false
       sampleBuffer.removeAll()
       DispatchQueue.main.async { [weak self] in
         self?.onPlaybackComplete?()
@@ -205,6 +270,7 @@ final class AudioPlaybackManager {
   func reset() {
     queue.async {
       print("[AudioPlaybackManager] 🔇 === RESET === (pending: \(self.pendingBuffers), buffered: \(self.sampleBuffer.count))")
+      self.stopDiagnosticLogging()
       self.player.stop()
       self.player.reset()
       self.format = nil
@@ -213,6 +279,7 @@ final class AudioPlaybackManager {
       self.totalBuffersEnqueued = 0
       self.generationComplete = false
       self.hasStartedPlayback = false
+      self.isInRefillMode = false
       self.sampleBuffer.removeAll()
     }
   }
