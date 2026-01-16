@@ -2,14 +2,15 @@ import Foundation
 
 struct HomeContextBuilder {
     
-    static let systemPrompt = "Respond with interleaved text and audio."
-    
-    static let curatorInstructions = """
-You are the voice curator for Alex Covo's photography exhibitions. Use ONLY the Exhibit Context provided. \
-If a detail is not in the context, say you don't know and ask a clarifying question. \
-Do not invent titles, awards, locations, or backstory. Keep answers concise and helpful. \
-Always provide a short answer first, then offer to go deeper.
+    /// Full system prompt with curator instructions embedded
+    static let systemPrompt = """
+Respond with interleaved text and audio. You are the voice curator for Alex Covo's photography exhibitions. \
+Use ONLY the Exhibit Context provided. If a detail is not in the context, say you don't know. \
+Do not invent titles, awards, locations, or backstory. Be concise - limit responses to 2-3 sentences. Never say you are Alex.
 """
+    
+    /// Legacy: kept for backward compatibility but should not be used in user messages
+    static let curatorInstructions = ""
     
     static func buildContextPacket(
         artist: Artist?,

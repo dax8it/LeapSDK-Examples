@@ -56,6 +56,12 @@ actor GenerationCoordinator {
         print("[GenerationCoordinator] ✅ Audio frames enabled")
     }
     
+    /// Disable audio frame acceptance (for clean soft-stop)
+    func disableAudioFrames() {
+        isAcceptingAudioFrames = false
+        print("[GenerationCoordinator] 🛑 Audio frames disabled")
+    }
+    
     /// Check if audio frame should be accepted
     func shouldAcceptAudioFrame(forGenerationID id: UUID) -> Bool {
         guard isAcceptingAudioFrames else {
@@ -167,7 +173,9 @@ final class CuratorRuntime {
     
     // Output length limits to prevent runaway audio
     private let maxOutputTokens: Int = 200  // Limit response length
-    private let maxPendingAudioMs: Double = 8000  // Soft stop if audio buffer exceeds 8s
+    private let maxPendingAudioMs: Double = 2000  // Soft stop if total buffered audio exceeds 2s
+    private let maxEmittedAudioMs: Double = 6000  // Hard cap: max 6s of audio per response
+    private var emittedAudioMs: Double = 0  // Track audio emitted in current response
     
     var onStreamingText: ((String) -> Void)?
     var onAudioSample: (([Float], Int) -> Void)?
@@ -470,6 +478,7 @@ final class CuratorRuntime {
         activeGenerationID = genID
         isGenerating = true
         generationComplete = false
+        emittedAudioMs = 0  // Reset audio tracking for new response
         state = .generating
         
         // CRASH-TIME BREADCRUMBS: Log state before generation
@@ -502,8 +511,16 @@ final class CuratorRuntime {
             do {
                 for try await event in stream {
                     if Task.isCancelled || shouldStop {
-                        print("[CuratorRuntime] 🧠 Generation stopped (id=\(genID.uuidString.prefix(8)), tokens=\(tokenCount))")
-                        break
+                        print("[CuratorRuntime] 🧠 Generation stopped (id=\(genID.uuidString.prefix(8)), tokens=\(tokenCount), emittedAudio=\(Int(await MainActor.run { self.emittedAudioMs }))ms)")
+                        // CLEAN SOFT-STOP: disable audio frames, end coordinator, let playback drain
+                        await self.generationCoordinator.disableAudioFrames()
+                        await self.generationCoordinator.endGeneration(id: genID)
+                        await MainActor.run {
+                            self.isGenerating = false
+                            self.generationComplete = true
+                            self.playbackManager.markGenerationComplete()  // Let playback drain normally
+                        }
+                        return
                     }
                     
                     // Check 30s timeout kill-switch
@@ -583,10 +600,21 @@ final class CuratorRuntime {
         case .reasoningChunk:
             onStatusChange?("Thinking...")
         case .audioSample(let samples, let sampleRate):
-            // Check audio buffer limit before enqueueing
-            let pendingMs = playbackManager.pendingDurationMs
-            if pendingMs >= maxPendingAudioMs {
-                print("[CuratorRuntime] ⚠️ Audio buffer limit reached (\(Int(pendingMs))ms), soft stopping generation")
+            // Calculate audio duration for this sample
+            let sampleDurationMs = Double(samples.count) / Double(sampleRate) * 1000.0
+            emittedAudioMs += sampleDurationMs
+            
+            // HARD CAP: max 6s of audio per response
+            if emittedAudioMs >= maxEmittedAudioMs {
+                print("[CuratorRuntime] ⚠️ HARD CAP: emittedAudio=\(Int(emittedAudioMs))ms >= \(Int(maxEmittedAudioMs))ms, stopping generation")
+                shouldStop = true
+                return
+            }
+            
+            // SOFT CAP: total buffered audio (pending + scheduled)
+            let totalBufferedMs = playbackManager.pendingDurationMs
+            if totalBufferedMs >= maxPendingAudioMs {
+                print("[CuratorRuntime] ⚠️ Buffer limit: totalBuffered=\(Int(totalBufferedMs))ms >= \(Int(maxPendingAudioMs))ms, soft stopping")
                 shouldStop = true
                 return
             }
