@@ -136,10 +136,12 @@ final class CuratorRuntime {
         
         let options = LiquidInferenceEngineOptions(
             bundlePath: modelURL.path(),
-            contextSize: 4096,
+            cpuThreads: 4,              // Explicit thread count for steady throughput
+            contextSize: 2048,          // Reduced for lower latency
             nGpuLayers: 0,
             mmProjPath: mmProjPath,
             audioDecoderPath: vocoderPath,
+            audioDecoderUseGpu: true,   // Offload vocoder to GPU
             audioTokenizerPath: audioTokenizerPath
         )
         

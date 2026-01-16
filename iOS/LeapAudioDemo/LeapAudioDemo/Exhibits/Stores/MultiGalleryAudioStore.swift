@@ -208,7 +208,7 @@ final class MultiGalleryAudioStore {
     func getConversationContextPrefix() -> String {
         guard let store = libraryStore else { return "" }
         
-        var prefix = "You are Alex Covo's photography curator. Be concise.\n"
+        var prefix = "You are an AI art curator assistant for photographer Alex Covo. Never claim to BE Alex Covo. Speak as his curator. Be concise.\n"
         
         switch currentContext {
         case .home:
