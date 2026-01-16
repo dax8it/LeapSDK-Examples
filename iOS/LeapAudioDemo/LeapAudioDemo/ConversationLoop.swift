@@ -115,11 +115,11 @@ final class ConversationLoop {
     private var generationStartTime: Date?
     private let generationTimeoutSeconds: Double = 30.0  // Kill-switch timeout
     
-    // Speech-gated commit: tuning knobs
+    // Speech-gated commit: tuning knobs (conservative to prevent nonsense turns)
     private let startThresholdDb: Float = -40     // dB level to start speech detection
     private let endThresholdDb: Float = -45       // dB level for silence (hysteresis)
-    private let minSpeechMs: Double = 300         // Minimum speech duration before sending
-    private let endSilenceMs: Double = 900        // Silence duration to end utterance
+    private let minSpeechMs: Double = 700         // Minimum speech duration before sending (was 300ms)
+    private let endSilenceMs: Double = 1200       // Silence duration to end utterance (was 900ms)
     private let maxUtteranceMs: Double = 12000    // Maximum utterance length
     private let preRollMs: Double = 250           // Pre-roll buffer to capture first syllables
     private let frameMs: Double = 20              // Analyze in 20ms frames
@@ -156,15 +156,48 @@ final class ConversationLoop {
                 // Otherwise, more audio chunks may still be coming
                 guard self.generationComplete else { return }
                 
-                print("[ConversationLoop] 🔊 Playback complete, resuming listening")
+                print("[ConversationLoop] 🔊 Playback complete, starting drain barrier")
+                
+                // DRAIN BARRIER: Prevent decoder re-entrancy between turns
+                // 1. Wait 250ms delay
+                // 2. Verify playback manager is idle
+                // 3. Only then transition to listening
+                await self.performDrainBarrier()
+                
+                // After drain, verify we're still active and should continue
+                guard self.isActive, self.shouldContinue else { return }
+                
+                print("[ConversationLoop] ✅ Drain barrier complete, resuming listening")
                 self.onTurnComplete?()
                 
                 // Resume listening after model finishes speaking
-                if self.shouldContinue {
-                    self.generationComplete = false  // Reset for next turn
-                    self.startListening()
-                }
+                self.generationComplete = false  // Reset for next turn
+                self.startListening()
             }
+        }
+    }
+    
+    /// Drain barrier: wait for backend to be definitely idle before next turn
+    private func performDrainBarrier() async {
+        // Phase 1: Initial delay (250ms)
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        
+        // Phase 2: Wait for playback to be idle (up to 2s timeout)
+        let maxWaitIterations = 20  // 20 x 100ms = 2s max
+        for i in 0..<maxWaitIterations {
+            if playbackManager.isIdle {
+                print("[ConversationLoop] 🔄 Drain barrier: playback idle after \(i * 100)ms")
+                break
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
+        }
+        
+        // Phase 3: Additional settling time (200ms no-activity buffer)
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        
+        // Final idle check
+        if !playbackManager.isIdle {
+            print("[ConversationLoop] ⚠️ Drain barrier: playback not idle after timeout, proceeding anyway")
         }
     }
     
@@ -206,6 +239,7 @@ final class ConversationLoop {
         generationComplete = false
         isGenerationInProgress = false
         generationStartTime = nil
+        isRecording = false  // Reset recording state
         
         stopListening()
         conversationTask?.cancel()
@@ -240,8 +274,30 @@ final class ConversationLoop {
     
     // MARK: - Audio Recording
     
+    private var isRecording = false  // Track recording state to prevent race
+    
     private func startListening() {
-        guard isActive, !engine.isRunning else { return }
+        // RACE GUARD: Only start if in valid state
+        guard isActive else {
+            print("[ConversationLoop] ⚠️ startListening blocked: not active")
+            return
+        }
+        guard !isRecording else {
+            print("[ConversationLoop] ⚠️ startListening blocked: already recording")
+            return
+        }
+        guard !isGenerationInProgress else {
+            print("[ConversationLoop] ⚠️ startListening blocked: generation in progress")
+            return
+        }
+        guard !playbackManager.isPlaying else {
+            print("[ConversationLoop] ⚠️ startListening blocked: playback active")
+            return
+        }
+        guard !engine.isRunning else {
+            print("[ConversationLoop] ⚠️ startListening blocked: engine already running")
+            return
+        }
         
         do {
             let input = engine.inputNode
@@ -255,6 +311,8 @@ final class ConversationLoop {
             
             engine.prepare()
             try engine.start()
+            
+            isRecording = true  // Mark as recording
             
             // Reset speech detection state for new listening session
             resetUtteranceState()
@@ -270,10 +328,14 @@ final class ConversationLoop {
     }
     
     private func stopListening() {
-        guard engine.isRunning else { return }
+        // RACE GUARD: Only stop if actually recording
+        guard isRecording || engine.isRunning else {
+            return  // Silent return - not an error condition
+        }
         
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
+        isRecording = false  // Clear recording state
         print("[ConversationLoop] 🎤 Stopped listening")
     }
     

@@ -16,6 +16,9 @@ actor GenerationCoordinator {
     /// Check if generation is currently active (blocks new generations and resets)
     var isActive: Bool { isGenerationActive }
     
+    /// Check if audio frames are being accepted (for diagnostics)
+    var audioFramesEnabled: Bool { isAcceptingAudioFrames }
+    
     /// Start a new generation, blocking if one is already running
     /// Returns nil if generation is already active (caller should not proceed)
     func tryBeginGeneration() async -> UUID? {
@@ -469,7 +472,12 @@ final class CuratorRuntime {
         generationComplete = false
         state = .generating
         
+        // CRASH-TIME BREADCRUMBS: Log state before generation
+        let pendingMs = playbackManager.pendingDurationMs
+        let isPlaybackIdle = playbackManager.isIdle
+        let audioFramesEnabled = await generationCoordinator.audioFramesEnabled
         print("[CuratorRuntime] 🧠 === GENERATION START === (id=\(genID.uuidString.prefix(8)))")
+        print("[CuratorRuntime] 📊 Pre-gen state: pendingAudio=\(Int(pendingMs))ms, playbackIdle=\(isPlaybackIdle), audioFramesEnabled=\(audioFramesEnabled)")
         onStatusChange?("Thinking...")
         
         playbackManager.reset()

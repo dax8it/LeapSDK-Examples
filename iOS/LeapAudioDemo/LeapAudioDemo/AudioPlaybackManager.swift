@@ -39,6 +39,11 @@ final class AudioPlaybackManager {
   private var logTimer: DispatchSourceTimer?
   private var lastLogTime: Date = Date()
   
+  // Playback stuck detection
+  private var playbackStartTime: Date?
+  private var lastProgressTime: Date?
+  private let playbackStuckTimeoutSeconds: Double = 10.0  // Auto-reset if stuck for 10s
+  
   var onPlaybackComplete: (() -> Void)?
 
   init() {
@@ -72,7 +77,48 @@ final class AudioPlaybackManager {
     let pendingMs = Double(pendingBuffers * frameSize) / Double(currentSampleRate) * 1000.0
     let totalMs = bufferedMs + pendingMs
     let status = isInRefillMode ? "REFILL" : "OK"
-    print("[AudioPlaybackManager] 📊 Buffer: \(Int(bufferedMs))ms queued + \(Int(pendingMs))ms pending = \(Int(totalMs))ms total [\(status)]")
+    
+    // Check for stuck playback (only log occasionally to reduce noise)
+    if totalMs > 0, let lastProgress = lastProgressTime {
+      let stuckDuration = Date().timeIntervalSince(lastProgress)
+      if stuckDuration > playbackStuckTimeoutSeconds {
+        print("[AudioPlaybackManager] ⚠️ STUCK DETECTED: no progress for \(Int(stuckDuration))s, forcing reset")
+        forceResetDueToStuck()
+        return
+      }
+    }
+    
+    // Only log if buffer state changed significantly or every 2 seconds
+    let now = Date()
+    if now.timeIntervalSince(lastLogTime) >= 2.0 {
+      print("[AudioPlaybackManager] 📊 Buffer: \(Int(bufferedMs))ms queued + \(Int(pendingMs))ms pending = \(Int(totalMs))ms total [\(status)]")
+      lastLogTime = now
+    }
+  }
+  
+  /// Force reset due to stuck playback
+  private func forceResetDueToStuck() {
+    print("[AudioPlaybackManager] 🔄 Forcing reset due to stuck playback")
+    
+    // Clear all state
+    sampleBuffer.removeAll()
+    pendingBuffers = 0
+    isPlaybackActive = false
+    hasStartedPlayback = false
+    isInRefillMode = false
+    generationComplete = false
+    playbackStartTime = nil
+    lastProgressTime = nil
+    
+    // Stop player
+    player.stop()
+    
+    // Notify completion (so the turn loop can continue)
+    DispatchQueue.main.async { [weak self] in
+      self?.onPlaybackComplete?()
+    }
+    
+    stopDiagnosticLogging()
   }
   
   var isPlaying: Bool {
@@ -85,6 +131,13 @@ final class AudioPlaybackManager {
       let bufferedMs = Double(sampleBuffer.count) / Double(currentSampleRate) * 1000.0
       let pendingMs = Double(pendingBuffers * frameSize) / Double(currentSampleRate) * 1000.0
       return bufferedMs + pendingMs
+    }
+  }
+  
+  /// Check if playback is completely idle (no pending buffers, no queued samples)
+  var isIdle: Bool {
+    queue.sync {
+      return sampleBuffer.isEmpty && pendingBuffers == 0 && !isPlaybackActive
     }
   }
 
@@ -120,6 +173,8 @@ final class AudioPlaybackManager {
           print("[AudioPlaybackManager] 🔊 === PLAYBACK START === (jitter buffer filled: \(self.sampleBuffer.count) samples)")
           self.hasStartedPlayback = true
           self.isInRefillMode = false
+          self.playbackStartTime = Date()  // Track start time for stuck detection
+          self.lastProgressTime = Date()   // Initialize progress time
           self.startDiagnosticLogging()
           self.drainBufferToFrames()
         }
@@ -172,6 +227,7 @@ final class AudioPlaybackManager {
       player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
         self?.queue.async {
           self?.pendingBuffers -= 1
+          self?.lastProgressTime = Date()  // Track progress for stuck detection
           self?.checkPlaybackComplete()
         }
       }
@@ -290,6 +346,8 @@ final class AudioPlaybackManager {
       self.hasStartedPlayback = false
       self.isInRefillMode = false
       self.sampleBuffer.removeAll()
+      self.playbackStartTime = nil  // Clear stuck detection
+      self.lastProgressTime = nil
     }
   }
 
