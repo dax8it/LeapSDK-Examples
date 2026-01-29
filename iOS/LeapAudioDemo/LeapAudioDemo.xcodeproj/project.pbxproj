@@ -35,6 +35,7 @@
 		BA491E31E1FA9A04EFD1E3A0 /* IntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001F29ADCBEF2AF9FC4A2CBE /* IntroView.swift */; };
 		BD0A93C7CE23F0949EEFB572 /* CuratorRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F805F25BD5E0D2B4624EDA22 /* CuratorRuntime.swift */; };
 		C3F7D08682B40E392CB67EBD /* ExhibitMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4764CC929E9C503A124D808 /* ExhibitMeta.swift */; };
+		CD683D0574BC6B47EE32C5CF /* AudioDebug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22D2DA5C8E37B4F4B4323B7B /* AudioDebug.swift */; };
 		D488582DA22FA4FEAC48CC0D /* AudioDemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53ECF28854F137D471134B12 /* AudioDemoStore.swift */; };
 		D7F896B26F85F77D1D924D66 /* CuratorAudioStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF4E9EFE2F807D73931770BE /* CuratorAudioStore.swift */; };
 		DA8717DD9358B32F906DFFD5 /* ExhibitContextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DFFB08AD2DB896FEA20BC6 /* ExhibitContextBuilder.swift */; };
@@ -54,6 +55,7 @@
 		0BEB9298EA3B38057C5450F2 /* ExhibitOverviewContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitOverviewContextBuilder.swift; sourceTree = "<group>"; };
 		118C4DE5AA20E4ED7509DABB /* HomeContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeContextBuilder.swift; sourceTree = "<group>"; };
 		1D99F2D54176079CF1280C9E /* ArtworkDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkDetailView.swift; sourceTree = "<group>"; };
+		22D2DA5C8E37B4F4B4323B7B /* AudioDebug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDebug.swift; sourceTree = "<group>"; };
 		250FA3EE7241E8F72B7338E1 /* GalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryView.swift; sourceTree = "<group>"; };
 		3433EACF14DAF6D663100A8E /* ExhibitArtworkDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitArtworkDetailView.swift; sourceTree = "<group>"; };
 		3847CB6522B7258F9D2E679B /* audio-chat-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "audio-chat-icon.png"; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 			isa = PBXGroup;
 			children = (
 				D8B333E3DE9AD29A8F7F3E7E /* Assets.xcassets */,
+				22D2DA5C8E37B4F4B4323B7B /* AudioDebug.swift */,
 				4FA776FD950E1203A3F9F6EE /* AudioDemoApp.swift */,
 				53ECF28854F137D471134B12 /* AudioDemoStore.swift */,
 				A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */,
@@ -392,6 +395,7 @@
 				43CBD26B0A7276FED1ACAE8F /* Artist.swift in Sources */,
 				14A338C889702AFA43299855 /* Artwork.swift in Sources */,
 				AC7F39FDD74BD61BA97CFC3F /* ArtworkDetailView.swift in Sources */,
+				CD683D0574BC6B47EE32C5CF /* AudioDebug.swift in Sources */,
 				3CDC16DB21F1625FB0ADBD32 /* AudioDemoApp.swift in Sources */,
 				D488582DA22FA4FEAC48CC0D /* AudioDemoStore.swift in Sources */,
 				6238DC43629096521121BF99 /* AudioDemoView.swift in Sources */,
