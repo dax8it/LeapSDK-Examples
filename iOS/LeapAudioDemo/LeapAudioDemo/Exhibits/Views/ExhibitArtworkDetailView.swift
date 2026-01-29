@@ -118,8 +118,9 @@ struct ExhibitArtworkDetailView: View {
         }
         .onChange(of: currentIndex) { _, _ in
             audioStore.stopAllActivities(reason: .contextSwitch)
+            autoplayCompletionToken = nil
             updateContext()
-            if isAutoplayActive && !autoplayPaused && !isAdvancing {
+            if isAutoplayActive && !autoplayPaused {
                 showResponseOverlay = true
                 beginNarration(for: tourSessionID)
             }
@@ -202,25 +203,12 @@ struct ExhibitArtworkDetailView: View {
         isAdvancing = true
 
         if currentIndex < artworks.count - 1 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                guard shouldAdvance(for: token) else {
-                    isAdvancing = false
-                    return
-                }
-                showResponseOverlay = false
-                lastResponseText = ""
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    currentIndex += 1
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    guard shouldAdvance(for: token) else {
-                        isAdvancing = false
-                        return
-                    }
-                    beginNarration(for: token)
-                    isAdvancing = false
-                }
+            showResponseOverlay = false
+            lastResponseText = ""
+            withAnimation(.easeInOut(duration: 0.5)) {
+                currentIndex += 1
             }
+            isAdvancing = false
         } else {
             isAdvancing = false
             stopAutoplay()
