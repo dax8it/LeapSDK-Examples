@@ -173,8 +173,8 @@ final class CuratorRuntime {
     
     // BACKPRESSURE CONFIG: Output length limits to prevent runaway audio / ggml crashes
     private let maxOutputTokens: Int = 200  // Limit response length
-    private let maxPendingAudioMs: Double = 2000  // Soft stop if total buffered audio exceeds 2s
-    private let maxEmittedAudioMs: Double = 6000  // Hard cap: max 6s of audio per response
+    private let maxPendingAudioMs: Double = 4000  // Soft stop if total buffered audio exceeds 4s
+    private let maxEmittedAudioMs: Double = 9000  // Hard cap: max 9s of audio per response
     private var emittedAudioMs: Double = 0  // Track audio emitted in current response
     
     // GPU CONFIG: Toggle for A/B testing stability (crash may be in decoder GPU path)
@@ -638,6 +638,7 @@ final class CuratorRuntime {
             let totalBufferedMs = playbackManager.pendingDurationMs
             if totalBufferedMs >= maxPendingAudioMs {
                 print("[CuratorRuntime] ⚠️ Buffer limit: totalBuffered=\(Int(totalBufferedMs))ms >= \(Int(maxPendingAudioMs))ms, soft stopping")
+                AudioDebug.log("[CuratorRuntime] ⚠️ soft-stop pending=\(Int(totalBufferedMs))ms emitted=\(Int(emittedAudioMs))ms")
                 shouldStop = true
                 return
             }
