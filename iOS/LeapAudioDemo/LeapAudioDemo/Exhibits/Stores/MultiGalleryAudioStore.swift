@@ -10,6 +10,15 @@ enum MultiGalleryContext {
     case artwork(ExhibitMeta, Artwork)
 }
 
+enum StopReason: String {
+    case navigationAway
+    case contextSwitch
+    case startConversation
+    case startRecording
+    case newRequest
+    case manualStop
+}
+
 @Observable
 @MainActor
 final class MultiGalleryAudioStore {
@@ -40,6 +49,7 @@ final class MultiGalleryAudioStore {
     
     private var currentContext: MultiGalleryContext = .home
     private var libraryStore: ExhibitLibraryStore?
+    private var activeRequestID = UUID()
     
     private let runtime = CuratorRuntime.shared
     
@@ -67,39 +77,50 @@ final class MultiGalleryAudioStore {
     }
     
     private func setupRuntimeCallbacks() {
+        installRuntimeCallbacks(for: activeRequestID)
+    }
+
+    private func installRuntimeCallbacks(for token: UUID) {
         runtime.onStreamingText = { [weak self] text in
-            self?.streamingText.append(text)
+            guard let self, self.activeRequestID == token else { return }
+            self.streamingText.append(text)
         }
         
         runtime.onStatusChange = { [weak self] status in
-            self?.status = status
+            guard let self, self.activeRequestID == token else { return }
+            self.status = status
         }
         
         runtime.onGenerationComplete = { [weak self] completion in
-            self?.handleGenerationComplete(completion)
+            guard let self, self.activeRequestID == token else { return }
+            self.handleGenerationComplete(completion)
         }
         
         runtime.onGenerationError = { [weak self] error in
-            self?.handleGenerationError(error)
+            guard let self, self.activeRequestID == token else { return }
+            self.handleGenerationError(error)
         }
         
         runtime.onGenerationStopped = { [weak self] in
+            guard let self, self.activeRequestID == token else { return }
             print("[MultiGalleryAudioStore] ⏹️ Generation stopped (soft-stop)")
-            self?.isGenerating = false
-            self?.status = "Ready"
+            self.isGenerating = false
+            self.status = "Ready"
         }
         
         runtime.onPlaybackComplete = { [weak self] in
+            guard let self, self.activeRequestID == token else { return }
             print("[MultiGalleryAudioStore] 🔊 Playback complete, triggering callback")
-            self?.onAudioPlaybackComplete?()
+            self.onAudioPlaybackComplete?()
         }
         
         runtime.onAudioLevel = { [weak self] level in
-            self?.audioLevel = level
+            guard let self, self.activeRequestID == token else { return }
+            self.audioLevel = level
         }
         
         runtime.onConversationStateChange = { [weak self] state in
-            guard let self else { return }
+            guard let self, self.activeRequestID == token else { return }
             switch state {
             case .idle:
                 self.isConversationActive = false
@@ -112,6 +133,12 @@ final class MultiGalleryAudioStore {
                 self.isGenerating = false
             }
         }
+    }
+
+    private func rotateRequestID(reason: StopReason) {
+        activeRequestID = UUID()
+        installRuntimeCallbacks(for: activeRequestID)
+        print("[MultiGalleryAudioStore] 🔁 Request token reset (\(reason.rawValue))")
     }
     
     func setContext(_ context: MultiGalleryContext) {
@@ -274,12 +301,24 @@ final class MultiGalleryAudioStore {
     }
     
     func hardReset() async {
-        print("[MultiGalleryAudioStore] 🔄 Requesting hard reset")
-        await runtime.hardReset()
+        await stopAllActivitiesAsync(reason: .manualStop)
+    }
+
+    func stopAllActivities(reason: StopReason) {
+        Task { @MainActor in
+            await stopAllActivitiesAsync(reason: reason)
+        }
+    }
+
+    private func stopAllActivitiesAsync(reason: StopReason) async {
+        rotateRequestID(reason: reason)
         isGenerating = false
         isRecording = false
+        isConversationActive = false
+        audioLevel = 0
         streamingText = ""
         status = "Ready"
+        await runtime.hardReset(force: true)
     }
     
     func sendTextPrompt() {
@@ -292,21 +331,24 @@ final class MultiGalleryAudioStore {
     func sendTextPrompt(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        
-        let rules = getCuratorInstructions()
-        let contextPacket = buildContextPacket()
-        let fullText = buildUserPrompt(rules: rules, context: contextPacket, question: trimmed)
-        
-        lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n\(trimmed)"
-        print("[MultiGalleryAudioStore] 📝 Text prompt with context (\(fullText.count) chars)")
-        
-        let message = ChatMessage(role: .user, content: [.text(fullText)])
-        appendUserMessage(text: trimmed)
-        
-        streamingText = ""
-        isGenerating = true
-        
-        Task {
+
+        Task { @MainActor in
+            await stopAllActivitiesAsync(reason: .newRequest)
+            rotateRequestID(reason: .newRequest)
+            
+            let rules = getCuratorInstructions()
+            let contextPacket = buildContextPacket()
+            let fullText = buildUserPrompt(rules: rules, context: contextPacket, question: trimmed)
+            
+            lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n\(trimmed)"
+            print("[MultiGalleryAudioStore] 📝 Text prompt with context (\(fullText.count) chars)")
+            
+            let message = ChatMessage(role: .user, content: [.text(fullText)])
+            appendUserMessage(text: trimmed)
+            
+            streamingText = ""
+            isGenerating = true
+            
             await runtime.generate(message: message, systemPrompt: getSystemPrompt())
         }
     }
@@ -331,13 +373,16 @@ final class MultiGalleryAudioStore {
             }
             sendAudioPrompt(samples: capture.samples, sampleRate: capture.sampleRate)
         } else {
-            print("[MultiGalleryAudioStore] 🎤 Starting recording")
-            do {
-                try runtime.startRecording()
-                isRecording = true
-                status = "Recording..."
-            } catch {
-                status = "Recording failed: \(error.localizedDescription)"
+            Task { @MainActor in
+                await stopAllActivitiesAsync(reason: .startRecording)
+                print("[MultiGalleryAudioStore] 🎤 Starting recording")
+                do {
+                    try runtime.startRecording()
+                    isRecording = true
+                    status = "Recording..."
+                } catch {
+                    status = "Recording failed: \(error.localizedDescription)"
+                }
             }
         }
     }
@@ -356,6 +401,8 @@ final class MultiGalleryAudioStore {
     func startConversation() async {
         print("[MultiGalleryAudioStore] 💬 Starting conversation mode")
         
+        await stopAllActivitiesAsync(reason: .startConversation)
+        rotateRequestID(reason: .startConversation)
         let systemPrompt = getConversationSystemPrompt()
         let contextPrefix = getConversationContextPrefix()
         
@@ -372,9 +419,7 @@ final class MultiGalleryAudioStore {
     /// Stop conversational mode
     func stopConversation() {
         print("[MultiGalleryAudioStore] 💬 Stopping conversation mode")
-        runtime.stopConversation()
-        isConversationActive = false
-        status = "Ready"
+        stopAllActivities(reason: .manualStop)
     }
     
     /// Toggle conversation mode on/off
@@ -396,47 +441,50 @@ final class MultiGalleryAudioStore {
             status = "Audio capture was empty."
             return
         }
+
+        Task { @MainActor in
+            await stopAllActivitiesAsync(reason: .newRequest)
+            rotateRequestID(reason: .newRequest)
         
-        // Resample to 16kHz (model's expected rate) if needed
-        let resampledSamples: [Float]
-        let targetSampleRate: Int
-        
-        if sampleRate != AudioResampler.modelSampleRate {
-            guard let resampled = AudioResampler.resampleTo16kHz(samples: samples, sourceSampleRate: sampleRate) else {
-                status = "Failed to process audio."
-                print("[MultiGalleryAudioStore] ❌ Failed to resample audio")
-                return
+            // Resample to 16kHz (model's expected rate) if needed
+            let resampledSamples: [Float]
+            let targetSampleRate: Int
+            
+            if sampleRate != AudioResampler.modelSampleRate {
+                guard let resampled = AudioResampler.resampleTo16kHz(samples: samples, sourceSampleRate: sampleRate) else {
+                    status = "Failed to process audio."
+                    print("[MultiGalleryAudioStore] ❌ Failed to resample audio")
+                    return
+                }
+                resampledSamples = resampled
+                targetSampleRate = AudioResampler.modelSampleRate
+            } else {
+                resampledSamples = samples
+                targetSampleRate = sampleRate
             }
-            resampledSamples = resampled
-            targetSampleRate = AudioResampler.modelSampleRate
-        } else {
-            resampledSamples = samples
-            targetSampleRate = sampleRate
-        }
-        
-        let rules = getCuratorInstructions()
-        let contextPacket = buildContextPacket()
-        let fullContext = buildUserPrompt(rules: rules, context: contextPacket, question: "[AUDIO]")
-        
-        let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
-        let textContent = ChatMessageContent.text(fullContext)
-        
-        let chatMessage = ChatMessage(role: .user, content: [textContent, audioContent])
-        
-        lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n[AUDIO]"
-        print("[MultiGalleryAudioStore] 🎙️ Audio prompt with context (\(fullContext.count) chars text + audio)")
-        
-        var display = "Voice question"
-        if samples.count < sampleRate / 4 {
-            display = "Voice question (brief)"
-        }
-        
-        appendUserMessage(text: display)
-        
-        streamingText = ""
-        isGenerating = true
-        
-        Task {
+            
+            let rules = getCuratorInstructions()
+            let contextPacket = buildContextPacket()
+            let fullContext = buildUserPrompt(rules: rules, context: contextPacket, question: "[AUDIO]")
+            
+            let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
+            let textContent = ChatMessageContent.text(fullContext)
+            
+            let chatMessage = ChatMessage(role: .user, content: [textContent, audioContent])
+            
+            lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n[AUDIO]"
+            print("[MultiGalleryAudioStore] 🎙️ Audio prompt with context (\(fullContext.count) chars text + audio)")
+            
+            var display = "Voice question"
+            if samples.count < sampleRate / 4 {
+                display = "Voice question (brief)"
+            }
+            
+            appendUserMessage(text: display)
+            
+            streamingText = ""
+            isGenerating = true
+            
             await runtime.generate(message: chatMessage, systemPrompt: getSystemPrompt())
         }
     }

@@ -53,9 +53,7 @@ struct GalleriesOverviewView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
-                        Task {
-                            await audioStore.hardReset()
-                        }
+                        audioStore.stopAllActivities(reason: .navigationAway)
                         onGoHome()
                     } label: {
                         HStack(spacing: 4) {
@@ -81,6 +79,9 @@ struct GalleriesOverviewView: View {
             if !newText.isEmpty {
                 lastResponseText = newText
             }
+        }
+        .onDisappear {
+            audioStore.stopAllActivities(reason: .navigationAway)
         }
     }
     
@@ -180,9 +181,7 @@ struct GalleriesOverviewView: View {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(libraryStore.exhibitsWithImages) { exhibit in
                 ExhibitCard(exhibit: exhibit) {
-                    Task {
-                        await audioStore.hardReset()
-                    }
+                    audioStore.stopAllActivities(reason: .contextSwitch)
                     onSelectExhibit(exhibit)
                 }
             }
@@ -251,7 +250,7 @@ struct GalleriesOverviewView: View {
             .frame(height: 36)
             
             Button {
-                audioStore.stopConversation()
+                audioStore.stopAllActivities(reason: .manualStop)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "stop.circle.fill")

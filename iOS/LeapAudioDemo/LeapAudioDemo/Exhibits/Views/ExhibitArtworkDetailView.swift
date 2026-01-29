@@ -108,6 +108,7 @@ struct ExhibitArtworkDetailView: View {
             }
         }
         .onChange(of: currentIndex) { _, _ in
+            audioStore.stopAllActivities(reason: .contextSwitch)
             updateContext()
         }
         .onChange(of: audioStore.isGenerating) { _, isGenerating in
@@ -119,6 +120,9 @@ struct ExhibitArtworkDetailView: View {
             if !newText.isEmpty {
                 lastResponseText = newText
             }
+        }
+        .onDisappear {
+            audioStore.stopAllActivities(reason: .navigationAway)
         }
     }
     
@@ -156,9 +160,7 @@ struct ExhibitArtworkDetailView: View {
         print("[ExhibitArtworkDetailView] 🛑 Stopping autoplay")
         isAutoplayActive = false
         autoplayPaused = false
-        Task {
-            await audioStore.hardReset()
-        }
+        audioStore.stopAllActivities(reason: .manualStop)
     }
     
     private func advanceToNextArtwork() {
@@ -213,9 +215,7 @@ struct ExhibitArtworkDetailView: View {
             HStack {
                 Spacer()
                 Button {
-                    Task {
-                        await audioStore.hardReset()
-                    }
+                    audioStore.stopAllActivities(reason: .navigationAway)
                     dismiss()
                 } label: {
                     Image(systemName: "xmark")

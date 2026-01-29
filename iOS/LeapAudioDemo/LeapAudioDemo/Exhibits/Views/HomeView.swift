@@ -67,12 +67,8 @@ struct HomeView: View {
                 lastResponseText = newText
             }
         }
-        // FIX #5: Navigation guard - stop conversation on any navigation away
         .onDisappear {
-            if audioStore.isConversationActive {
-                print("[HomeView] 🛑 onDisappear: stopping conversation")
-                audioStore.stopConversation()
-            }
+            audioStore.stopAllActivities(reason: .navigationAway)
         }
     }
     
@@ -245,7 +241,7 @@ struct HomeView: View {
                 
                 // End Conversation button
                 Button {
-                    audioStore.stopConversation()
+                    audioStore.stopAllActivities(reason: .manualStop)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "stop.circle.fill")
@@ -266,10 +262,7 @@ struct HomeView: View {
     
     private var enterGalleriesButton: some View {
         Button {
-            // FIX #4: End conversation immediately when navigating away (hard stop)
-            if audioStore.isConversationActive {
-                audioStore.stopConversation()
-            }
+            audioStore.stopAllActivities(reason: .navigationAway)
             onEnterGalleries()
         } label: {
             Text("Enter Galleries")

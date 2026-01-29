@@ -51,9 +51,7 @@ struct ExhibitView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 12) {
                         Button {
-                            Task {
-                                await audioStore.hardReset()
-                            }
+                            audioStore.stopAllActivities(reason: .navigationAway)
                             onGoHome()
                         } label: {
                             Image(systemName: "house.fill")
@@ -61,9 +59,7 @@ struct ExhibitView: View {
                         }
                         
                         Button {
-                            Task {
-                                await audioStore.hardReset()
-                            }
+                            audioStore.stopAllActivities(reason: .navigationAway)
                             onGoBack()
                         } label: {
                             HStack(spacing: 2) {
@@ -107,6 +103,9 @@ struct ExhibitView: View {
             if !newText.isEmpty {
                 lastResponseText = newText
             }
+        }
+        .onDisappear {
+            audioStore.stopAllActivities(reason: .navigationAway)
         }
     }
     
@@ -187,6 +186,7 @@ struct ExhibitView: View {
         HStack(spacing: 16) {
             Button {
                 guard !libraryStore.activeWorks.isEmpty else { return }
+                audioStore.stopAllActivities(reason: .contextSwitch)
                 startAutoplay = true
                 selectedIndex = 0
             } label: {
@@ -215,6 +215,7 @@ struct ExhibitView: View {
             ForEach(Array(libraryStore.activeWorks.enumerated()), id: \.element.id) { index, artwork in
                 ExhibitArtworkThumbnail(artwork: artwork)
                     .onTapGesture {
+                        audioStore.stopAllActivities(reason: .contextSwitch)
                         startAutoplay = false
                         selectedIndex = index
                     }
