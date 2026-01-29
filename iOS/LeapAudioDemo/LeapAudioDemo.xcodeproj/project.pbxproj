@@ -40,14 +40,27 @@
 		D7F896B26F85F77D1D924D66 /* CuratorAudioStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF4E9EFE2F807D73931770BE /* CuratorAudioStore.swift */; };
 		DA8717DD9358B32F906DFFD5 /* ExhibitContextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DFFB08AD2DB896FEA20BC6 /* ExhibitContextBuilder.swift */; };
 		DDF57D7E32B15A87EB77CEEA /* LeapModelDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = 0C96DE1B168FC86D42742A1D /* LeapModelDownloader */; };
+		E06075C418CCA8499DCFE129 /* ContextBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00DC10738113C1524A102474 /* ContextBuilderTests.swift */; };
+		E9CCAF9314CC40E4D54723C9 /* JSONDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67599D2F706FF8FF318B3C6 /* JSONDecodingTests.swift */; };
 		EA035444183C551A33C26B15 /* ConversationLoop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57152C0CC9792255FFB9C907 /* ConversationLoop.swift */; };
 		F6A4EE2794F4612A9F4A2804 /* GalleriesOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE7E38A7437946D7F3A3075F /* GalleriesOverviewView.swift */; };
 		FAA969346E6F1AE4BE208C6A /* ExhibitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A06D9763D44E17C0CD0645 /* ExhibitStore.swift */; };
 		FEEA3D3470F7D5E768D32EFB /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A153A3606417E4461CEA67E /* RootTabView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		91AC20779D432D5B8AEB3EAF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9F4962CFD3A128C03D014992 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A258A605AFC3070635FF55BE;
+			remoteInfo = LeapAudioDemo;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		001F29ADCBEF2AF9FC4A2CBE /* IntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntroView.swift; sourceTree = "<group>"; };
+		00DC10738113C1524A102474 /* ContextBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextBuilderTests.swift; sourceTree = "<group>"; };
 		03DEAB666297DB7CD728BCBE /* MultiGalleryAudioStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiGalleryAudioStore.swift; sourceTree = "<group>"; };
 		04DFFB08AD2DB896FEA20BC6 /* ExhibitContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitContextBuilder.swift; sourceTree = "<group>"; };
 		08FEB622112AC3680F21BD10 /* ExhibitLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitLibraryStore.swift; sourceTree = "<group>"; };
@@ -72,9 +85,11 @@
 		93EB2E1EDBAB2BDC91295D2A /* CuratorChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuratorChatView.swift; sourceTree = "<group>"; };
 		A420EFCCB89E7AE7FE9512F1 /* AudioPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlaybackManager.swift; sourceTree = "<group>"; };
 		A699295A388564B8E018B998 /* CuratorContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuratorContextBuilder.swift; sourceTree = "<group>"; };
+		A7ACB05063A5F21F0CA1160F /* LeapAudioDemoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LeapAudioDemoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AE7E38A7437946D7F3A3075F /* GalleriesOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleriesOverviewView.swift; sourceTree = "<group>"; };
 		AF4E9EFE2F807D73931770BE /* CuratorAudioStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuratorAudioStore.swift; sourceTree = "<group>"; };
 		B3CA97C6B6420A260882EF50 /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
+		B67599D2F706FF8FF318B3C6 /* JSONDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONDecodingTests.swift; sourceTree = "<group>"; };
 		B966FF3D40976F6AC05B524D /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		C02A4D40A789973A4659E993 /* SystemPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPrompts.swift; sourceTree = "<group>"; };
 		C167BC08F018549F7527A494 /* ExhibitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExhibitView.swift; sourceTree = "<group>"; };
@@ -103,6 +118,7 @@
 			isa = PBXGroup;
 			children = (
 				12DC65FB0D279D903DC9B644 /* LeapAudioDemo */,
+				5901ECDDE4A8352BD1C39803 /* LeapAudioDemoTests */,
 				DEE0A8AE9D69744430074D90 /* Packages */,
 				B4036A8AC7B70EDB46361BDC /* Products */,
 			);
@@ -167,6 +183,15 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		5901ECDDE4A8352BD1C39803 /* LeapAudioDemoTests */ = {
+			isa = PBXGroup;
+			children = (
+				00DC10738113C1524A102474 /* ContextBuilderTests.swift */,
+				B67599D2F706FF8FF318B3C6 /* JSONDecodingTests.swift */,
+			);
+			path = LeapAudioDemoTests;
+			sourceTree = "<group>";
+		};
 		59799B2FA0C191B048AA8FCE /* Assets */ = {
 			isa = PBXGroup;
 			children = (
@@ -216,6 +241,7 @@
 			isa = PBXGroup;
 			children = (
 				53F44F917B6BBB709AEECF08 /* LeapAudioDemo.app */,
+				A7ACB05063A5F21F0CA1160F /* LeapAudioDemoTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -273,6 +299,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		64DE696B1F0318FD7A716D3C /* LeapAudioDemoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4991C9F859DC4D03C0E32EA6 /* Build configuration list for PBXNativeTarget "LeapAudioDemoTests" */;
+			buildPhases = (
+				B05F8DD9FD691FB56B81C7FF /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7C2470AC6ED8C6FF8706822B /* PBXTargetDependency */,
+			);
+			name = LeapAudioDemoTests;
+			packageProductDependencies = (
+			);
+			productName = LeapAudioDemoTests;
+			productReference = A7ACB05063A5F21F0CA1160F /* LeapAudioDemoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		A258A605AFC3070635FF55BE /* LeapAudioDemo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 49DE8D8B9E5F85BB375DBD84 /* Build configuration list for PBXNativeTarget "LeapAudioDemo" */;
@@ -328,6 +372,7 @@
 			projectRoot = "";
 			targets = (
 				A258A605AFC3070635FF55BE /* LeapAudioDemo */,
+				64DE696B1F0318FD7A716D3C /* LeapAudioDemoTests */,
 			);
 		};
 /* End PBXProject section */
@@ -426,9 +471,43 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B05F8DD9FD691FB56B81C7FF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E06075C418CCA8499DCFE129 /* ContextBuilderTests.swift in Sources */,
+				E9CCAF9314CC40E4D54723C9 /* JSONDecodingTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		7C2470AC6ED8C6FF8706822B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A258A605AFC3070635FF55BE /* LeapAudioDemo */;
+			targetProxy = 91AC20779D432D5B8AEB3EAF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2295BF120917061D07AE8403 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.liquid.examples.LeapAudioDemoTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LeapAudioDemo.app/LeapAudioDemo";
+			};
+			name = Debug;
+		};
 		4041DB5319B4EAAF3FBD6F53 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -512,6 +591,23 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C376D472C50F7EBB44734CAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.liquid.examples.LeapAudioDemoTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LeapAudioDemo.app/LeapAudioDemo";
 			};
 			name = Release;
 		};
@@ -611,6 +707,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4991C9F859DC4D03C0E32EA6 /* Build configuration list for PBXNativeTarget "LeapAudioDemoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2295BF120917061D07AE8403 /* Debug */,
+				C376D472C50F7EBB44734CAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		49DE8D8B9E5F85BB375DBD84 /* Build configuration list for PBXNativeTarget "LeapAudioDemo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

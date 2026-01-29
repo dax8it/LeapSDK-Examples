@@ -20,6 +20,15 @@ schemes:
       config: Debug
     archive:
       config: Release
+  LeapAudioDemoTests:
+    build:
+      targets:
+        LeapAudioDemo: all
+        LeapAudioDemoTests: all
+    test:
+      config: Debug
+      targets:
+        - LeapAudioDemoTests
 
 configs:
   Debug: debug
@@ -88,3 +97,16 @@ targets:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
         Release:
           SWIFT_COMPILATION_MODE: wholemodule
+
+  LeapAudioDemoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: LeapAudioDemoTests
+    dependencies:
+      - target: LeapAudioDemo
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/LeapAudioDemo.app/LeapAudioDemo"
