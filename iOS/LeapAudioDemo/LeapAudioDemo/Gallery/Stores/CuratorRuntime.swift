@@ -265,6 +265,20 @@ final class CuratorRuntime {
             print("[CuratorRuntime] Model already loaded")
             return
         }
+
+        // ✅ 1) Skip model load when running unit tests (prevents test-host crash)
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            print("[CuratorRuntime] 🧪 XCTest detected — skipping model load")
+            onStatusChange?("Ready (tests)")
+            return
+        }
+
+        // ✅ 2) Skip model load on Simulator (prevents Metal/ggml crash)
+        #if targetEnvironment(simulator)
+        print("[CuratorRuntime] 📵 Simulator — skipping model load (run on device)")
+        onStatusChange?("Inference disabled on Simulator. Run on device.")
+        return
+        #endif
         
         print("[CuratorRuntime] 📦 Loading model...")
         onStatusChange?("Loading model...")
