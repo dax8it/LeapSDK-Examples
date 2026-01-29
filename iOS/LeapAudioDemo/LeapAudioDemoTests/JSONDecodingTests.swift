@@ -33,6 +33,15 @@ final class JSONDecodingTests: XCTestCase {
         XCTAssertEqual(decoded.exhibits[0].order, 1)
     }
 
+    func testBundledIndexJSONDecodes() throws {
+        let url = try XCTUnwrap(
+            Bundle.main.url(forResource: "index", withExtension: "json", subdirectory: "Exhibits/Data")
+        )
+        let data = try Data(contentsOf: url)
+        let decoded = try JSONDecoder().decode(ExhibitIndex.self, from: data)
+        XCTAssertFalse(decoded.exhibits.isEmpty)
+    }
+
     func testWorksJSONDecodes() throws {
         let json = """
         [
