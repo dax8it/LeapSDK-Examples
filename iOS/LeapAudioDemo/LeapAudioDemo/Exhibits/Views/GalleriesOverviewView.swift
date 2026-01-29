@@ -27,22 +27,30 @@ struct GalleriesOverviewView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        headerSection
-                            .padding(.top, 16)
-                        
-                        if showResponseOverlay || audioStore.isGenerating || audioStore.status == "Speaking..." {
-                            responseOverlay
-                                .padding(.horizontal, 20)
+                        if libraryStore.isLoading {
+                            loadingState
+                        } else if let error = libraryStore.loadError {
+                            errorState(message: error)
+                        } else if libraryStore.exhibitsWithImages.isEmpty {
+                            emptyState
+                        } else {
+                            headerSection
+                                .padding(.top, 16)
+                            
+                            if showResponseOverlay || audioStore.isGenerating || audioStore.status == "Speaking..." {
+                                responseOverlay
+                                    .padding(.horizontal, 20)
+                            }
+                            
+                            suggestedQuestionsSection
+                            
+                            exhibitGrid
+                                .padding(.horizontal, 16)
+                            
+                            inputSection
+                                .padding(.top, 16)
+                                .padding(.bottom, 100)
                         }
-                        
-                        suggestedQuestionsSection
-                        
-                        exhibitGrid
-                            .padding(.horizontal, 16)
-                        
-                        inputSection
-                            .padding(.top, 16)
-                            .padding(.bottom, 100)
                     }
                 }
             }
@@ -266,6 +274,52 @@ struct GalleriesOverviewView: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    private var loadingState: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .tint(.white)
+            Text("Loading galleries...")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.8))
+        }
+        .padding(.top, 40)
+    }
+
+    private func errorState(message: String) -> some View {
+        VStack(spacing: 12) {
+            Text("Data unavailable")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+            Button("Retry") {
+                libraryStore.reload()
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(.white)
+            .clipShape(Capsule())
+        }
+        .padding(.top, 40)
+        .padding(.horizontal, 24)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("No exhibits available")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("Please check back later.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .padding(.top, 40)
     }
 }
 

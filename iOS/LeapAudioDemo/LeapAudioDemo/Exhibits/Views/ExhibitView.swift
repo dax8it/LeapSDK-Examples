@@ -24,22 +24,28 @@ struct ExhibitView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        exhibitHeader
-                            .padding(.top, 8)
-                        
-                        if showResponseOverlay || audioStore.isGenerating || audioStore.status == "Speaking..." {
-                            responseOverlay
+                        if libraryStore.exhibitLoadError != nil {
+                            errorState
+                        } else if libraryStore.activeWorks.isEmpty {
+                            emptyState
+                        } else {
+                            exhibitHeader
+                                .padding(.top, 8)
+                            
+                            if showResponseOverlay || audioStore.isGenerating || audioStore.status == "Speaking..." {
+                                responseOverlay
+                                    .padding(.horizontal, 16)
+                            }
+                            
+                            tourControls
                                 .padding(.horizontal, 16)
+                            
+                            artworkGrid
+                            
+                            inputSection
+                                .padding(.top, 16)
+                                .padding(.bottom, 100)
                         }
-                        
-                        tourControls
-                            .padding(.horizontal, 16)
-                        
-                        artworkGrid
-                        
-                        inputSection
-                            .padding(.top, 16)
-                            .padding(.bottom, 100)
                     }
                 }
             }
@@ -314,6 +320,43 @@ struct ExhibitView: View {
             }
         }
         .padding(.vertical, 20)
+    }
+
+    private var errorState: some View {
+        VStack(spacing: 12) {
+            Text("Exhibit data unavailable")
+                .font(.headline)
+                .foregroundStyle(.white)
+            if let message = libraryStore.exhibitLoadError {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            }
+            Button("Retry") {
+                libraryStore.reloadActiveExhibit()
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(.white)
+            .clipShape(Capsule())
+        }
+        .padding(.top, 40)
+        .padding(.horizontal, 24)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("No works available")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("Please check back later.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .padding(.top, 40)
     }
 }
 

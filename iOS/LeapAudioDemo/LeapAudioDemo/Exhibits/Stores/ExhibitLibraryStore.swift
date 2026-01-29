@@ -8,7 +8,9 @@ final class ExhibitLibraryStore {
     private(set) var exhibits: [ExhibitMeta] = []
     private(set) var appHelp: AppHelp?
     private(set) var isLoaded = false
+    private(set) var isLoading = false
     private(set) var loadError: String?
+    private(set) var exhibitLoadError: String?
     
     private(set) var activeExhibit: ExhibitMeta?
     private(set) var activeArtist: Artist?
@@ -30,6 +32,9 @@ final class ExhibitLibraryStore {
     
     func loadIndex() {
         guard !isLoaded else { return }
+        guard !isLoading else { return }
+        loadError = nil
+        isLoading = true
         
         do {
             let index: ExhibitIndex = try loadJSON("index", subdirectory: "Exhibits/Data")
@@ -49,11 +54,26 @@ final class ExhibitLibraryStore {
             exhibits = loadedExhibits
             appHelp = try? loadJSON("app_help", subdirectory: "Exhibits/Data")
             isLoaded = true
+            isLoading = false
+#if DEBUG
+            logBundlePathsIfNeeded()
+#endif
             print("[ExhibitLibraryStore] ✅ Loaded \(exhibits.count) exhibits, \(exhibitsWithImages.count) with images")
         } catch {
             loadError = "Failed to load exhibit index: \(error.localizedDescription)"
+            isLoaded = false
+            isLoading = false
             print("[ExhibitLibraryStore] ❌ \(loadError ?? "")")
         }
+    }
+
+    func reload() {
+        isLoaded = false
+        loadError = nil
+        exhibits = []
+        appHelp = nil
+        clearActiveExhibit()
+        loadIndex()
     }
     
     /// Load the first work's image name for an exhibit
@@ -76,6 +96,7 @@ final class ExhibitLibraryStore {
         print("[ExhibitLibraryStore] 📂 Selecting exhibit: \(exhibit.id)")
         activeExhibit = exhibit
         selectedArtwork = nil
+        exhibitLoadError = nil
         loadExhibitData(for: exhibit.id)
     }
     
@@ -93,6 +114,7 @@ final class ExhibitLibraryStore {
         activeArtist = nil
         activeWorks = []
         selectedArtwork = nil
+        exhibitLoadError = nil
     }
     
     func selectArtwork(_ artwork: Artwork) {
@@ -102,6 +124,12 @@ final class ExhibitLibraryStore {
     
     func clearSelectedArtwork() {
         selectedArtwork = nil
+    }
+
+    func reloadActiveExhibit() {
+        guard let exhibit = activeExhibit else { return }
+        exhibitLoadError = nil
+        loadExhibitData(for: exhibit.id)
     }
     
     func exhibit(byID id: String) -> ExhibitMeta? {
@@ -119,12 +147,14 @@ final class ExhibitLibraryStore {
             
             activeArtist = try? loadJSONByPath(artistPath, as: Artist.self)
             activeWorks = try loadJSONByPath(worksPath, as: [Artwork].self)
+            exhibitLoadError = nil
             
             print("[ExhibitLibraryStore] ✅ Loaded exhibit data: artist=\(activeArtist?.name ?? "nil"), works=\(activeWorks.count)")
         } catch {
             print("[ExhibitLibraryStore] ❌ Failed to load exhibit data for \(exhibitID): \(error)")
             activeArtist = nil
             activeWorks = []
+            exhibitLoadError = "Exhibit data unavailable."
         }
     }
     
@@ -155,8 +185,30 @@ final class ExhibitLibraryStore {
     private func decodeJSON<T: Decodable>(from url: URL) throws -> T {
         let data = try Data(contentsOf: url)
         let decoder = JSONDecoder()
-        return try decoder.decode(T.self, from: data)
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw ExhibitLibraryError.decodeFailed(url.lastPathComponent)
+        }
     }
+
+#if DEBUG
+    private var didLogBundlePaths = false
+
+    private func logBundlePathsIfNeeded() {
+        guard !didLogBundlePaths else { return }
+        didLogBundlePaths = true
+
+        let indexPath = Bundle.main.url(forResource: "index", withExtension: "json", subdirectory: "Exhibits/Data")?.path ?? "nil"
+        print("[ExhibitLibraryStore] 🔍 index.json path: \(indexPath)")
+
+        guard let first = exhibits.first else { return }
+        let artistPath = Bundle.main.url(forResource: "artist", withExtension: "json", subdirectory: "Exhibits/Data/\(first.id)")?.path ?? "nil"
+        let worksPath = Bundle.main.url(forResource: "works", withExtension: "json", subdirectory: "Exhibits/Data/\(first.id)")?.path ?? "nil"
+        print("[ExhibitLibraryStore] 🔍 \(first.id)/artist.json path: \(artistPath)")
+        print("[ExhibitLibraryStore] 🔍 \(first.id)/works.json path: \(worksPath)")
+    }
+#endif
     
     func debugStatus() -> String {
         """
@@ -172,11 +224,14 @@ final class ExhibitLibraryStore {
 
 enum ExhibitLibraryError: LocalizedError {
     case fileNotFound(String)
+    case decodeFailed(String)
     
     var errorDescription: String? {
         switch self {
         case .fileNotFound(let path):
             return "Could not find \(path) in bundle"
+        case .decodeFailed(let name):
+            return "Failed to decode \(name)"
         }
     }
 }

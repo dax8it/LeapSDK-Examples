@@ -31,50 +31,56 @@ struct ExhibitArtworkDetailView: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                fullScreenImage(geometry: geometry)
-                
-                VStack(spacing: 0) {
-                    navigationArrows
-                    Spacer()
-                    
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            titleOverlay
-                            if showResponseOverlay || audioStore.isGenerating || audioStore.status == "Speaking..." {
-                                responseOverlay
+        Group {
+            if artworks.isEmpty {
+                emptyState
+            } else {
+                GeometryReader { geometry in
+                    ZStack {
+                        fullScreenImage(geometry: geometry)
+                        
+                        VStack(spacing: 0) {
+                            navigationArrows
+                            Spacer()
+                            
+                            HStack(alignment: .bottom) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    titleOverlay
+                                    if showResponseOverlay || audioStore.isGenerating || audioStore.status == "Speaking..." {
+                                        responseOverlay
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                if currentArtwork.hasMetadata {
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            showSummaryOverlay = true
+                                        }
+                                    } label: {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.65))
+                                            .frame(width: 44, height: 44)
+                                            .overlay {
+                                                Image(systemName: "info")
+                                                    .font(.system(size: 20, weight: .medium))
+                                                    .foregroundStyle(.black.opacity(0.8))
+                                            }
+                                    }
+                                    .padding(.trailing, 16)
+                                }
                             }
+                            .padding(.bottom, 16)
+                            
+                            inputSection
+                                .padding(.top, 24)
                         }
                         
-                        Spacer()
-                        
-                        if currentArtwork.hasMetadata {
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.25)) {
-                                    showSummaryOverlay = true
-                                }
-                            } label: {
-                                Circle()
-                                    .fill(Color.white.opacity(0.65))
-                                    .frame(width: 44, height: 44)
-                                    .overlay {
-                                        Image(systemName: "info")
-                                            .font(.system(size: 20, weight: .medium))
-                                            .foregroundStyle(.black.opacity(0.8))
-                                    }
-                            }
-                            .padding(.trailing, 16)
+                        if showSummaryOverlay {
+                            summaryOverlay
                         }
                     }
-                    .padding(.bottom, 16)
-                    
-                    inputSection
-                        .padding(.top, 24)
-                }
-                
-                if showSummaryOverlay {
-                    summaryOverlay
                 }
             }
         }
@@ -185,6 +191,8 @@ struct ExhibitArtworkDetailView: View {
     }
     
     private func updateContext() {
+        guard currentIndex >= 0, currentIndex < artworks.count else { return }
+        libraryStore.selectArtwork(currentArtwork)
         audioStore.setArtworkContext(exhibit: exhibit, artwork: currentArtwork)
     }
     
@@ -546,6 +554,25 @@ struct ExhibitArtworkDetailView: View {
         }
         .padding(.vertical, 16)
         .padding(.bottom, 20)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("No artwork available")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Button("Close") {
+                dismiss()
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(.white)
+            .clipShape(Capsule())
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.ignoresSafeArea())
     }
     
     private func loadImage(named name: String) -> UIImage? {
