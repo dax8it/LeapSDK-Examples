@@ -15,6 +15,9 @@ struct ExhibitArtworkDetailView: View {
     @State private var lastResponseText = ""
     @State private var isAutoplayActive = false
     @State private var autoplayPaused = false
+    @State private var tourSessionID = UUID()
+    @State private var autoplayCompletionToken: UUID?
+    @State private var isAdvancing = false
     
     init(libraryStore: ExhibitLibraryStore, audioStore: MultiGalleryAudioStore, exhibit: ExhibitMeta, artworks: [Artwork], initialIndex: Int, startAutoplay: Bool = false) {
         self.libraryStore = libraryStore
@@ -116,6 +119,10 @@ struct ExhibitArtworkDetailView: View {
         .onChange(of: currentIndex) { _, _ in
             audioStore.stopAllActivities(reason: .contextSwitch)
             updateContext()
+            if isAutoplayActive && !autoplayPaused && !isAdvancing {
+                showResponseOverlay = true
+                beginNarration(for: tourSessionID)
+            }
         }
         .onChange(of: audioStore.isGenerating) { _, isGenerating in
             if isGenerating {
@@ -128,25 +135,31 @@ struct ExhibitArtworkDetailView: View {
             }
         }
         .onDisappear {
-            audioStore.stopAllActivities(reason: .navigationAway)
+            stopAutoplay()
         }
     }
     
     private func setupAutoplayCallback() {
         audioStore.onAudioPlaybackComplete = { [self] in
-            guard isAutoplayActive && !autoplayPaused else { return }
-            advanceToNextArtwork()
+            guard let token = autoplayCompletionToken else { return }
+            guard shouldAdvance(for: token) else { return }
+            autoplayCompletionToken = nil
+            advanceToNextArtwork(for: token)
         }
     }
     
     private func startAutoplayTour() {
         print("[ExhibitArtworkDetailView] 🎬 Starting autoplay tour")
+        audioStore.stopAllActivities(reason: .newRequest)
         isAutoplayActive = true
         autoplayPaused = false
+        isAdvancing = false
+        tourSessionID = UUID()
+        autoplayCompletionToken = nil
         showResponseOverlay = true
         Task {
             await audioStore.startAutoTourMode()
-            audioStore.speakAboutCurrentArtwork()
+            beginNarration(for: tourSessionID)
         }
     }
     
@@ -154,11 +167,12 @@ struct ExhibitArtworkDetailView: View {
         if autoplayPaused {
             print("[ExhibitArtworkDetailView] ▶️ Resuming autoplay")
             autoplayPaused = false
-            audioStore.speakAboutCurrentArtwork()
+            beginNarration(for: tourSessionID)
         } else {
             print("[ExhibitArtworkDetailView] ⏸️ Pausing autoplay")
             autoplayPaused = true
-            audioStore.stopPlayback()
+            autoplayCompletionToken = nil
+            audioStore.stopAllActivities(reason: .manualStop)
         }
     }
     
@@ -166,27 +180,50 @@ struct ExhibitArtworkDetailView: View {
         print("[ExhibitArtworkDetailView] 🛑 Stopping autoplay")
         isAutoplayActive = false
         autoplayPaused = false
+        isAdvancing = false
+        autoplayCompletionToken = nil
+        tourSessionID = UUID()
         audioStore.stopAllActivities(reason: .manualStop)
     }
     
-    private func advanceToNextArtwork() {
+    private func shouldAdvance(for token: UUID) -> Bool {
+        isAutoplayActive && !autoplayPaused && tourSessionID == token
+    }
+
+    private func beginNarration(for token: UUID) {
+        guard shouldAdvance(for: token) else { return }
+        autoplayCompletionToken = token
+        audioStore.speakAboutCurrentArtwork()
+    }
+
+    private func advanceToNextArtwork(for token: UUID) {
+        guard shouldAdvance(for: token) else { return }
+        guard !isAdvancing else { return }
+        isAdvancing = true
+
         if currentIndex < artworks.count - 1 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                guard isAutoplayActive && !autoplayPaused else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                guard shouldAdvance(for: token) else {
+                    isAdvancing = false
+                    return
+                }
                 showResponseOverlay = false
                 lastResponseText = ""
                 withAnimation(.easeInOut(duration: 0.5)) {
                     currentIndex += 1
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    if isAutoplayActive && !autoplayPaused {
-                        audioStore.speakAboutCurrentArtwork()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    guard shouldAdvance(for: token) else {
+                        isAdvancing = false
+                        return
                     }
+                    beginNarration(for: token)
+                    isAdvancing = false
                 }
             }
         } else {
-            isAutoplayActive = false
-            autoplayPaused = false
+            isAdvancing = false
+            stopAutoplay()
         }
     }
     
@@ -485,11 +522,17 @@ struct ExhibitArtworkDetailView: View {
                         .background(Color.white)
                         .clipShape(Capsule())
                         .onSubmit {
+                            if isAutoplayActive {
+                                stopAutoplay()
+                            }
                             audioStore.sendTextPrompt()
                         }
                     
                     // Push-to-talk button
                     Button {
+                        if isAutoplayActive {
+                            stopAutoplay()
+                        }
                         audioStore.toggleRecording()
                     } label: {
                         Image(systemName: audioStore.isRecording ? "stop.fill" : "mic.fill")
@@ -503,6 +546,9 @@ struct ExhibitArtworkDetailView: View {
                     
                     // Conversation mode button
                     Button {
+                        if isAutoplayActive {
+                            stopAutoplay()
+                        }
                         Task {
                             await audioStore.startConversation()
                         }
