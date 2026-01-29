@@ -76,6 +76,23 @@ targets:
           cp -R "${SRCROOT}/LeapAudioDemo/Exhibits/Data/"* "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data/"
         name: Copy JSON Data
         basedOnDependencyAnalysis: false
+      - script: |
+          APP_DIR="${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}"
+          if [ -d "${APP_DIR}" ]; then
+            find "${APP_DIR}" -name '._*' -print -delete || true
+            find "${APP_DIR}" -exec xattr -c {} + || true
+          fi
+          if [ -d "${TARGET_BUILD_DIR}" ]; then
+            find "${TARGET_BUILD_DIR}" -name '._*' -print -delete || true
+            find "${TARGET_BUILD_DIR}" -exec xattr -c {} + || true
+          fi
+          if [ -d "${SRCROOT}/LeapAudioDemo/Exhibits/Data" ]; then
+            find "${SRCROOT}/LeapAudioDemo/Exhibits/Data" -name '._*' -print -delete || true
+            find "${SRCROOT}/LeapAudioDemo/Exhibits/Data" -exec xattr -c {} + || true
+          fi
+          echo "[Sanitize Bundle] Cleaned ${APP_DIR}"
+        name: Sanitize Bundle (codesign)
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.liquid.examples.LeapAudioDemo
