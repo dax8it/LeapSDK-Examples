@@ -308,11 +308,22 @@ final class AudioPlaybackManager {
           }
         }
         
-        if !self.player.isPlaying && self.hasStartedPlayback {
+        // FORCE START: Even if jitter buffer wasn't filled, start playback for final flush
+        if !self.player.isPlaying {
+          self.hasStartedPlayback = true  // Mark as started for checkPlaybackComplete
           self.player.play()
         }
       } else {
-        self.checkPlaybackComplete()
+        // No samples to flush - fire completion directly if nothing scheduled
+        if self.scheduledFrameCount == 0 {
+          print("[AudioPlaybackManager] 🔊 No audio to play, firing completion directly")
+          self.generationComplete = false
+          DispatchQueue.main.async { [weak self] in
+            self?.onPlaybackComplete?()
+          }
+        } else {
+          self.checkPlaybackComplete()
+        }
       }
     }
   }

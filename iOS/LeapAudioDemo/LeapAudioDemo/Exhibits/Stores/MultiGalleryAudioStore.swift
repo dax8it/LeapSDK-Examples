@@ -83,6 +83,12 @@ final class MultiGalleryAudioStore {
             self?.handleGenerationError(error)
         }
         
+        runtime.onGenerationStopped = { [weak self] in
+            print("[MultiGalleryAudioStore] ⏹️ Generation stopped (soft-stop)")
+            self?.isGenerating = false
+            self?.status = "Ready"
+        }
+        
         runtime.onPlaybackComplete = { [weak self] in
             print("[MultiGalleryAudioStore] 🔊 Playback complete, triggering callback")
             self?.onAudioPlaybackComplete?()

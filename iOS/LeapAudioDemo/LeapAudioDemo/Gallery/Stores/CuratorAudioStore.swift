@@ -58,6 +58,12 @@ final class CuratorAudioStore {
             self?.handleGenerationError(error)
         }
         
+        runtime.onGenerationStopped = { [weak self] in
+            print("[CuratorAudioStore] ⏹️ Generation stopped (soft-stop)")
+            self?.isGenerating = false
+            self?.status = "Ready"
+        }
+        
         runtime.onPlaybackComplete = { [weak self] in
             print("[CuratorAudioStore] 🔊 Playback complete, triggering callback")
             self?.onAudioPlaybackComplete?()

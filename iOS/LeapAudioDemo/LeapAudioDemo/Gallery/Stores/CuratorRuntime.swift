@@ -178,11 +178,12 @@ final class CuratorRuntime {
     private var emittedAudioMs: Double = 0  // Track audio emitted in current response
     
     // GPU CONFIG: Toggle for A/B testing stability (crash may be in decoder GPU path)
-    static var audioDecoderUseGpu: Bool = false  // Set to true to test GPU-accelerated decoder
+    static var audioDecoderUseGpu: Bool = true  // GPU-accelerated decoder for smoother audio
     
     var onStreamingText: ((String) -> Void)?
     var onAudioSample: (([Float], Int) -> Void)?
     var onGenerationComplete: ((MessageCompletion) -> Void)?
+    var onGenerationStopped: (() -> Void)?  // Called when generation is soft-stopped (e.g., buffer limit)
     var onGenerationError: ((Error) -> Void)?
     var onPlaybackComplete: (() -> Void)?
     var onStatusChange: ((String) -> Void)?
@@ -523,6 +524,7 @@ final class CuratorRuntime {
                             self.isGenerating = false
                             self.generationComplete = true
                             self.playbackManager.markGenerationComplete()  // Let playback drain normally
+                            self.onGenerationStopped?()  // Notify listeners that generation was soft-stopped
                         }
                         return
                     }

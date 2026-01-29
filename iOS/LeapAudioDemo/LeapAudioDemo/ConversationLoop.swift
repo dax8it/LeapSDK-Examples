@@ -630,6 +630,16 @@ final class ConversationLoop {
         if !hasAudio && isActive && shouldContinue {
             generationComplete = false  // Reset for next turn
             startListening()
+        } else if hasAudio {
+            // SAFETY TIMEOUT: Resume listening after 15s even if playback callback doesn't fire
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 15_000_000_000)  // 15s timeout
+                guard self.isActive, self.shouldContinue, self.generationComplete else { return }
+                print("[ConversationLoop] ⚠️ Playback timeout (15s), forcing resume")
+                self.generationComplete = false
+                self.playbackManager.reset()
+                self.startListening()
+            }
         }
     }
     
