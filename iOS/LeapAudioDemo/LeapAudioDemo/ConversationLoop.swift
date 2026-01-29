@@ -42,7 +42,7 @@ enum AudioResampler {
         
         let inputDuration = Double(samples.count) / Double(sourceSampleRate)
         let outputDuration = Double(dcRemoved.count) / Double(modelSampleRate)
-        print("[AudioResampler] \(samples.count)@\(sourceSampleRate)Hz → \(dcRemoved.count)@\(modelSampleRate)Hz (\(String(format: "%.2f", inputDuration))s)")
+        AudioDebug.log("[AudioResampler] \(samples.count)@\(sourceSampleRate)Hz → \(dcRemoved.count)@\(modelSampleRate)Hz (\(String(format: "%.2f", inputDuration))s)")
         
         return dcRemoved
     }
@@ -329,6 +329,7 @@ final class ConversationLoop {
             let input = engine.inputNode
             let format = input.outputFormat(forBus: 0)
             audioBuffer.sampleRate = format.sampleRate
+            AudioDebug.log("[ConversationLoop] 🎤 startListening @ \(Int(audioBuffer.sampleRate))Hz")
             
             input.removeTap(onBus: 0)
             input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
@@ -363,6 +364,7 @@ final class ConversationLoop {
         engine.stop()
         isRecording = false  // Clear recording state
         print("[ConversationLoop] 🎤 Stopped listening")
+        AudioDebug.log("[ConversationLoop] 🎤 stopListening")
     }
     
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
@@ -495,7 +497,7 @@ final class ConversationLoop {
         // Resample to 16kHz (model's expected rate) if needed
         let resampledSamples: [Float]
         let targetSampleRate: Int
-        
+
         if sampleRate != AudioResampler.modelSampleRate {
             guard let resampled = AudioResampler.resampleTo16kHz(samples: samples, sourceSampleRate: sampleRate) else {
                 print("[ConversationLoop] ❌ Failed to resample audio")
@@ -503,9 +505,11 @@ final class ConversationLoop {
             }
             resampledSamples = resampled
             targetSampleRate = AudioResampler.modelSampleRate
+            AudioDebug.log("[ConversationLoop] 🔁 Resampled \(samples.count)@\(sampleRate)Hz → \(resampledSamples.count)@\(targetSampleRate)Hz")
         } else {
             resampledSamples = samples
             targetSampleRate = sampleRate
+            AudioDebug.log("[ConversationLoop] ✅ Using \(samples.count)@\(sampleRate)Hz")
         }
         
         let resampledDuration = Double(resampledSamples.count) / Double(targetSampleRate)

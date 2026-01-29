@@ -350,6 +350,7 @@ final class CuratorRuntime {
         let genID = activeGenerationID
         print("[CuratorRuntime] ❌ Cancelling generation (id=\(genID?.uuidString.prefix(8) ?? "nil"))")
         
+        AudioDebug.log("[CuratorRuntime] 🛑 generation cancel")
         task.cancel()
         
         var attempts = 0
@@ -368,6 +369,7 @@ final class CuratorRuntime {
     
     private func stopPlayback() {
         print("[CuratorRuntime] 🔇 Stopping playback")
+        AudioDebug.log("[CuratorRuntime] 🔇 stopPlayback")
         playbackManager.reset()
         state = state == .playing ? .idle : state
     }
@@ -485,6 +487,7 @@ final class CuratorRuntime {
         generationComplete = false
         emittedAudioMs = 0  // Reset audio tracking for new response
         state = .generating
+        AudioDebug.log("[CuratorRuntime] 🧠 generation start id=\(genID.uuidString.prefix(8)) mode=\(mode.rawValue)")
         
         // CRASH-TIME BREADCRUMBS: Log state before generation
         let pendingMs = playbackManager.pendingDurationMs
@@ -640,6 +643,7 @@ final class CuratorRuntime {
     
     private func finishGeneration(with completion: MessageCompletion, genID: UUID) {
         print("[CuratorRuntime] 🧠 Generation finished (id=\(genID.uuidString.prefix(8))), waiting for audio playback")
+        AudioDebug.log("[CuratorRuntime] ✅ generation finish")
         isGenerating = false
         generationComplete = true
         
@@ -651,12 +655,14 @@ final class CuratorRuntime {
     
     func startRecording() throws {
         print("[CuratorRuntime] 🎤 === RECORDING START ===")
+        AudioDebug.log("[CuratorRuntime] 🎤 recording start")
         state = .recording
         try recorder.start()
     }
     
     func stopRecordingAndCapture() -> (samples: [Float], sampleRate: Int)? {
         print("[CuratorRuntime] 🎤 === RECORDING STOP ===")
+        AudioDebug.log("[CuratorRuntime] 🎤 recording stop")
         recorder.stop()
         state = .idle
         return recorder.capture()
@@ -664,6 +670,7 @@ final class CuratorRuntime {
     
     func cancelRecording() {
         print("[CuratorRuntime] 🎤 Recording cancelled")
+        AudioDebug.log("[CuratorRuntime] 🎤 recording cancel")
         recorder.cancel()
         state = .idle
     }

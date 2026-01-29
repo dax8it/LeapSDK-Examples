@@ -188,6 +188,7 @@ final class AudioPlaybackManager {
       if !self.hasStartedPlayback {
         if self.sampleBuffer.count >= self.jitterBufferSamples {
           print("[AudioPlaybackManager] 🔊 === PLAYBACK START === (jitter buffer filled: \(self.sampleBuffer.count) samples)")
+          AudioDebug.log("[AudioPlaybackManager] 🔊 playback start (\(self.currentSampleRate)Hz, buffered=\(self.sampleBuffer.count))")
           self.hasStartedPlayback = true
           self.isInRefillMode = false
           self.playbackStartTime = Date()  // Track start time for stuck detection
@@ -260,6 +261,7 @@ final class AudioPlaybackManager {
     // Only fire complete if generation is done AND scheduledFrameCount == 0 AND buffer is drained
     if scheduledFrameCount == 0 && generationComplete && sampleBuffer.count < frameSize {
       print("[AudioPlaybackManager] 🔊 === PLAYBACK COMPLETE === (total frames: \(totalBuffersEnqueued))")
+      AudioDebug.log("[AudioPlaybackManager] 🔊 playback complete (frames=\(totalBuffersEnqueued))")
       stopDiagnosticLogging()
       totalBuffersEnqueued = 0
       generationComplete = false
@@ -363,6 +365,7 @@ final class AudioPlaybackManager {
   func stop() {
     queue.async {
       print("[AudioPlaybackManager] 🛑 === STOP === (scheduledFrames: \(self.scheduledFrameCount))")
+      AudioDebug.log("[AudioPlaybackManager] 🛑 stop (scheduled=\(self.scheduledFrameCount), buffered=\(self.sampleBuffer.count))")
       self.player.stop()
     }
   }
@@ -370,6 +373,7 @@ final class AudioPlaybackManager {
   func reset() {
     queue.async {
       print("[AudioPlaybackManager] 🔇 === RESET === (scheduledFrames: \(self.scheduledFrameCount), buffered: \(self.sampleBuffer.count))")
+      AudioDebug.log("[AudioPlaybackManager] 🔇 reset (scheduled=\(self.scheduledFrameCount), buffered=\(self.sampleBuffer.count))")
       self.stopDiagnosticLogging()
       self.player.stop()
       self.player.reset()

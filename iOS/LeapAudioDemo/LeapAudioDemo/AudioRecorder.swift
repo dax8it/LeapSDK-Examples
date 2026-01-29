@@ -24,6 +24,7 @@ final class AudioRecorder {
     let input = engine.inputNode
     let format = input.outputFormat(forBus: 0)
     capturedSampleRate = format.sampleRate
+    AudioDebug.log("[AudioRecorder] 🎤 start @ \(Int(capturedSampleRate))Hz")
 
     input.removeTap(onBus: 0)
     input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
@@ -50,6 +51,7 @@ final class AudioRecorder {
     engine.inputNode.removeTap(onBus: 0)
     engine.stop()
     isRecording = false
+    AudioDebug.log("[AudioRecorder] 🎤 stop")
   }
 
   func capture() -> (samples: [Float], sampleRate: Int)? {
@@ -59,6 +61,7 @@ final class AudioRecorder {
       samples.removeAll(keepingCapacity: true)
     }
     guard !result.isEmpty else { return nil }
+    AudioDebug.log("[AudioRecorder] 🎤 capture \(result.count) frames @ \(Int(capturedSampleRate))Hz")
     return (result, Int(capturedSampleRate))
   }
 
@@ -67,5 +70,6 @@ final class AudioRecorder {
     queue.sync {
       samples.removeAll(keepingCapacity: true)
     }
+    AudioDebug.log("[AudioRecorder] 🎤 cancel")
   }
 }

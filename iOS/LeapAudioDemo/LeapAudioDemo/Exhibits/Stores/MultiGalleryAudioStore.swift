@@ -442,6 +442,7 @@ final class MultiGalleryAudioStore {
 
         Task { @MainActor in
             await stopAllActivitiesAsync(reason: .newRequest)
+            AudioDebug.log("[MultiGalleryAudioStore] 🎙️ input \(samples.count)@\(sampleRate)Hz")
             
             // Resample to 16kHz (model's expected rate) if needed
             let resampledSamples: [Float]
@@ -455,9 +456,11 @@ final class MultiGalleryAudioStore {
                 }
                 resampledSamples = resampled
                 targetSampleRate = AudioResampler.modelSampleRate
+                AudioDebug.log("[MultiGalleryAudioStore] 🔁 Resampled \(samples.count)@\(sampleRate)Hz → \(resampledSamples.count)@\(targetSampleRate)Hz")
             } else {
                 resampledSamples = samples
                 targetSampleRate = sampleRate
+                AudioDebug.log("[MultiGalleryAudioStore] ✅ Using \(samples.count)@\(sampleRate)Hz")
             }
             
             let rules = getCuratorInstructions()

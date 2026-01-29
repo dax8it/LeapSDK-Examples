@@ -243,12 +243,31 @@ final class CuratorAudioStore {
             status = "Audio capture was empty."
             return
         }
+
+        // Resample to 16kHz (model's expected rate) if needed
+        let resampledSamples: [Float]
+        let targetSampleRate: Int
+        
+        if sampleRate != AudioResampler.modelSampleRate {
+            guard let resampled = AudioResampler.resampleTo16kHz(samples: samples, sourceSampleRate: sampleRate) else {
+                status = "Failed to process audio."
+                print("[CuratorAudioStore] ❌ Failed to resample audio")
+                return
+            }
+            resampledSamples = resampled
+            targetSampleRate = AudioResampler.modelSampleRate
+            AudioDebug.log("[CuratorAudioStore] 🔁 Resampled \(samples.count)@\(sampleRate)Hz → \(resampledSamples.count)@\(targetSampleRate)Hz")
+        } else {
+            resampledSamples = samples
+            targetSampleRate = sampleRate
+            AudioDebug.log("[CuratorAudioStore] ✅ Using \(samples.count)@\(sampleRate)Hz")
+        }
         
         let rules = CuratorContextBuilder.curatorInstructions
         let contextPacket = buildContextPacket()
         let fullContext = buildUserPrompt(rules: rules, context: contextPacket, question: "[AUDIO]")
         
-        let audioContent = ChatMessageContent.fromFloatSamples(samples, sampleRate: sampleRate)
+        let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
         let textContent = ChatMessageContent.text(fullContext)
         
         let chatMessage = ChatMessage(role: .user, content: [textContent, audioContent])
