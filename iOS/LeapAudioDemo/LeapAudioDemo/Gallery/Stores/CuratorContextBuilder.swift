@@ -2,16 +2,8 @@ import Foundation
 
 struct CuratorContextBuilder {
     
-    /// Full system prompt with curator instructions embedded
-    /// User message should be just audio (no instructions there)
-    static let systemPrompt = """
-Respond with interleaved text and audio. You are the exhibition curator. \
-Use ONLY the provided Exhibit Context. If the answer is not in the context, say you don't know. \
-Do not invent details. Be concise - limit responses to 2-3 sentences. Never say you are Alex.
-"""
-    
-    /// Legacy: kept for backward compatibility but should not be used in user messages
-    static let curatorInstructions = ""
+    /// Curator rules injected into user messages
+    static let curatorInstructions = SystemPrompts.curatorRules
     
     static func buildContextPacket(artist: Artist?, artwork: Artwork?) -> String {
         var lines: [String] = ["[Exhibit Context]"]

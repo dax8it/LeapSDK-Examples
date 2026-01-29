@@ -172,11 +172,11 @@ final class CuratorAudioStore {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
+        let rules = CuratorContextBuilder.curatorInstructions
         let contextPacket = buildContextPacket()
-        let instructions = CuratorContextBuilder.curatorInstructions
-        let fullText = "\(instructions)\n\n\(contextPacket)\n\nUser question: \(trimmed)"
+        let fullText = buildUserPrompt(rules: rules, context: contextPacket, question: trimmed)
         
-        lastPromptDebug = "INSTRUCTIONS:\n\(instructions)\n\nCONTEXT:\n\(contextPacket)\n\nQUERY:\n\(trimmed)"
+        lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n\(trimmed)"
         print("[CuratorAudioStore] 📝 Text prompt with context (\(fullText.count) chars)")
         
         let message = ChatMessage(role: .user, content: [.text(fullText)])
@@ -186,7 +186,7 @@ final class CuratorAudioStore {
         isGenerating = true
         
         Task {
-            await runtime.generate(message: message, systemPrompt: CuratorContextBuilder.systemPrompt)
+            await runtime.generate(message: message, systemPrompt: SystemPrompts.interleavedTextAndAudio)
         }
     }
     
@@ -238,16 +238,16 @@ final class CuratorAudioStore {
             return
         }
         
+        let rules = CuratorContextBuilder.curatorInstructions
         let contextPacket = buildContextPacket()
-        let instructions = CuratorContextBuilder.curatorInstructions
-        let fullContext = "\(instructions)\n\n\(contextPacket)\n\nUser voice question follows:"
+        let fullContext = buildUserPrompt(rules: rules, context: contextPacket, question: "[AUDIO]")
         
         let audioContent = ChatMessageContent.fromFloatSamples(samples, sampleRate: sampleRate)
         let textContent = ChatMessageContent.text(fullContext)
         
         let chatMessage = ChatMessage(role: .user, content: [textContent, audioContent])
         
-        lastPromptDebug = "INSTRUCTIONS:\n\(instructions)\n\nCONTEXT (voice):\n\(contextPacket)\n\n[AUDIO INPUT]"
+        lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n[AUDIO]"
         print("[CuratorAudioStore] 🎙️ Audio prompt with context (\(fullContext.count) chars text + audio)")
         
         var display = "Voice question"
@@ -261,7 +261,7 @@ final class CuratorAudioStore {
         isGenerating = true
         
         Task {
-            await runtime.generate(message: chatMessage, systemPrompt: CuratorContextBuilder.systemPrompt)
+            await runtime.generate(message: chatMessage, systemPrompt: SystemPrompts.interleavedTextAndAudio)
         }
     }
     
@@ -295,6 +295,19 @@ final class CuratorAudioStore {
         streamingText = ""
         status = "Error: \(error.localizedDescription)"
         print("[CuratorAudioStore] ❌ Generation error: \(error)")
+    }
+
+    private func buildUserPrompt(rules: String, context: String, question: String) -> String {
+        """
+        RULES:
+        \(rules)
+
+        CONTEXT:
+        \(context)
+
+        USER QUESTION:
+        \(question)
+        """
     }
     
     func debugStatus() -> String {

@@ -2,15 +2,8 @@ import Foundation
 
 struct ExhibitOverviewContextBuilder {
     
-    /// Full system prompt with curator instructions embedded
-    static let systemPrompt = """
-Respond with interleaved text and audio. You are the voice curator for Alex Covo's photography exhibitions. \
-Use ONLY the Exhibit Context provided. If a detail is not in the context, say you don't know. \
-Do not invent titles, awards, locations, or backstory. Be concise - limit responses to 2-3 sentences. Never say you are Alex.
-"""
-    
-    /// Legacy: kept for backward compatibility but should not be used in user messages
-    static let curatorInstructions = ""
+    /// Curator rules injected into user messages
+    static let curatorInstructions = SystemPrompts.curatorRules
     
     static func buildContextPacket(
         exhibits: [ExhibitMeta],

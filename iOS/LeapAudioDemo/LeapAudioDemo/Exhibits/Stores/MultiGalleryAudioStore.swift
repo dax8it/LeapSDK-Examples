@@ -208,45 +208,19 @@ final class MultiGalleryAudioStore {
     
     /// Simple system prompt for push-to-talk (context is in user message)
     private func getSystemPrompt() -> String {
-        return "Respond with interleaved text and audio."
+        return SystemPrompts.interleavedTextAndAudio
     }
     
     /// System prompt for conversation mode - MUST be exactly this string for LFM2.5
     private func getConversationSystemPrompt() -> String {
-        return "Respond with interleaved text and audio."
+        return SystemPrompts.interleavedTextAndAudio
     }
     
     /// Compact context prefix for conversation mode audio - prepended to user audio
     func getConversationContextPrefix() -> String {
-        guard let store = libraryStore else { return "" }
-        
-        var prefix = "You are an AI art curator assistant for photographer Alex Covo. Never say 'I am Alex Covo' or 'I'm Alex Covo'. Always refer to Alex in third person. Be concise.\n"
-        
-        switch currentContext {
-        case .home:
-            let galleries = store.exhibits.prefix(5).map { $0.title }
-            prefix += "[Galleries: \(galleries.joined(separator: ", "))]\n"
-            
-        case .galleriesOverview:
-            for exhibit in store.exhibits.prefix(4) {
-                prefix += "• \(exhibit.title): \(String(exhibit.shortStatement.prefix(40)))\n"
-            }
-            
-        case .exhibit(let exhibit):
-            prefix += "[Gallery: \(exhibit.title)]\n"
-            let titles = store.activeWorks.compactMap { $0.title.isEmpty ? nil : $0.title }.prefix(5)
-            if !titles.isEmpty {
-                prefix += "Works: \(titles.joined(separator: ", "))\n"
-            }
-            
-        case .artwork(let exhibit, let artwork):
-            prefix += "[Work: \(artwork.displayTitle) in \(exhibit.title)]\n"
-            if !artwork.summary.isEmpty {
-                prefix += String(artwork.summary.prefix(80)) + "\n"
-            }
-        }
-        
-        return prefix
+        let rules = getCuratorInstructions()
+        let context = buildContextPacket()
+        return buildUserPrompt(rules: rules, context: context, question: "[AUDIO]")
     }
     
     func setupModel() async {
@@ -313,11 +287,11 @@ final class MultiGalleryAudioStore {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
+        let rules = getCuratorInstructions()
         let contextPacket = buildContextPacket()
-        let instructions = getCuratorInstructions()
-        let fullText = "\(instructions)\n\n\(contextPacket)\n\nUser question: \(trimmed)"
+        let fullText = buildUserPrompt(rules: rules, context: contextPacket, question: trimmed)
         
-        lastPromptDebug = "INSTRUCTIONS:\n\(instructions)\n\nCONTEXT:\n\(contextPacket)\n\nQUERY:\n\(trimmed)"
+        lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n\(trimmed)"
         print("[MultiGalleryAudioStore] 📝 Text prompt with context (\(fullText.count) chars)")
         
         let message = ChatMessage(role: .user, content: [.text(fullText)])
@@ -434,16 +408,16 @@ final class MultiGalleryAudioStore {
             targetSampleRate = sampleRate
         }
         
+        let rules = getCuratorInstructions()
         let contextPacket = buildContextPacket()
-        let instructions = getCuratorInstructions()
-        let fullContext = "\(instructions)\n\n\(contextPacket)"
+        let fullContext = buildUserPrompt(rules: rules, context: contextPacket, question: "[AUDIO]")
         
         let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
         let textContent = ChatMessageContent.text(fullContext)
         
         let chatMessage = ChatMessage(role: .user, content: [textContent, audioContent])
         
-        lastPromptDebug = "INSTRUCTIONS:\n\(instructions)\n\nCONTEXT (voice):\n\(contextPacket)\n\n[AUDIO INPUT]"
+        lastPromptDebug = "RULES:\n\(rules)\n\nCONTEXT:\n\(contextPacket)\n\nUSER QUESTION:\n[AUDIO]"
         print("[MultiGalleryAudioStore] 🎙️ Audio prompt with context (\(fullContext.count) chars text + audio)")
         
         var display = "Voice question"
@@ -491,6 +465,19 @@ final class MultiGalleryAudioStore {
         streamingText = ""
         status = "Error: \(error.localizedDescription)"
         print("[MultiGalleryAudioStore] ❌ Generation error: \(error)")
+    }
+
+    private func buildUserPrompt(rules: String, context: String, question: String) -> String {
+        """
+        RULES:
+        \(rules)
+
+        CONTEXT:
+        \(context)
+
+        USER QUESTION:
+        \(question)
+        """
     }
     
     func debugStatus() -> String {

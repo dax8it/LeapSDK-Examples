@@ -120,7 +120,7 @@ final class AudioDemoStore {
       conversation = Conversation(
         modelRunner: runner,
         history: [
-          ChatMessage(role: .system, content: [.text("Respond with interleaved text and audio.")])
+          ChatMessage(role: .system, content: [.text(SystemPrompts.interleavedTextAndAudio)])
         ])
       messages.append(
         AudioDemoMessage(
@@ -216,7 +216,7 @@ final class AudioDemoStore {
     let freshConversation = Conversation(
       modelRunner: modelRunner,
       history: [
-        ChatMessage(role: .system, content: [.text("Respond with interleaved text and audio.")])
+        ChatMessage(role: .system, content: [.text(SystemPrompts.interleavedTextAndAudio)])
       ])
     conversation = freshConversation
 

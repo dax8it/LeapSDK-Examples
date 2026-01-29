@@ -228,15 +228,13 @@ final class ConversationLoop {
         print("[ConversationLoop] 🎙️ Starting conversation")
         
         self.modelRunner = modelRunner
-        // SYSTEM PROMPT: Contains ALL curator rules - user message will have ONLY audio
-        // Merge contextPrefix into systemPrompt so user message stays clean
-        if contextPrefix.isEmpty {
-            self.systemPrompt = systemPrompt
-        } else {
-            self.systemPrompt = systemPrompt + "\n\n" + contextPrefix
-        }
-        self.contextPrefix = ""  // Clear - now part of system prompt
+        // SYSTEM PROMPT: Must be exact. Rules/context are injected via a user text message.
+        self.systemPrompt = systemPrompt
+        self.contextPrefix = contextPrefix
         self.history = [ChatMessage(role: .system, content: [.text(self.systemPrompt)])]
+        if !contextPrefix.isEmpty {
+            self.history.append(ChatMessage(role: .user, content: [.text(contextPrefix)]))
+        }
         self.shouldContinue = true
         self.isActive = true
         
@@ -523,7 +521,7 @@ final class ConversationLoop {
         
         // USER MESSAGE: EXACTLY ONE content item (audio ONLY)
         // LeapSDK constraint: "user message content must contain exactly one a string or audio content"
-        // All curator rules are in systemPrompt, user message is ONLY the audio
+        // Rules/context are injected as a prior user text message (contextPrefix)
         let audioContent = ChatMessageContent.fromFloatSamples(resampledSamples, sampleRate: targetSampleRate)
         let userMessage = ChatMessage(role: .user, content: [audioContent])
         
