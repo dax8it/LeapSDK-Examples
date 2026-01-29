@@ -311,6 +311,7 @@ final class MultiGalleryAudioStore {
     }
 
     private func stopAllActivitiesAsync(reason: StopReason) async {
+        await runtime.hardReset(force: true)
         rotateRequestID(reason: reason)
         isGenerating = false
         isRecording = false
@@ -318,7 +319,6 @@ final class MultiGalleryAudioStore {
         audioLevel = 0
         streamingText = ""
         status = "Ready"
-        await runtime.hardReset(force: true)
     }
     
     func sendTextPrompt() {
@@ -334,7 +334,6 @@ final class MultiGalleryAudioStore {
 
         Task { @MainActor in
             await stopAllActivitiesAsync(reason: .newRequest)
-            rotateRequestID(reason: .newRequest)
             
             let rules = getCuratorInstructions()
             let contextPacket = buildContextPacket()
@@ -402,7 +401,6 @@ final class MultiGalleryAudioStore {
         print("[MultiGalleryAudioStore] 💬 Starting conversation mode")
         
         await stopAllActivitiesAsync(reason: .startConversation)
-        rotateRequestID(reason: .startConversation)
         let systemPrompt = getConversationSystemPrompt()
         let contextPrefix = getConversationContextPrefix()
         
@@ -444,8 +442,7 @@ final class MultiGalleryAudioStore {
 
         Task { @MainActor in
             await stopAllActivitiesAsync(reason: .newRequest)
-            rotateRequestID(reason: .newRequest)
-        
+            
             // Resample to 16kHz (model's expected rate) if needed
             let resampledSamples: [Float]
             let targetSampleRate: Int
