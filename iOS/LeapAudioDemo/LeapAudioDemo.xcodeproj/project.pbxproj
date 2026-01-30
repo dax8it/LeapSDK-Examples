@@ -326,6 +326,7 @@
 				3DBE36D5058D94B591426B99 /* Frameworks */,
 				E37AB44BB70482FDFD525CF4 /* Copy GGUF Models */,
 				FF45E00AFA14A87CFF673B7D /* Copy JSON Data */,
+				C1DAAF34195D52A0B1D2CB2C /* Copy Artwork Images */,
 				C17CDF4118E7E2CB587A6425 /* Sanitize Bundle (codesign) */,
 			);
 			buildRules = (
@@ -410,6 +411,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "APP_DIR=\"${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}\"\nif [ -d \"${APP_DIR}\" ]; then\n  find \"${APP_DIR}\" -name '._*' -print -delete || true\n  find \"${APP_DIR}\" -exec xattr -c {} + || true\nfi\nif [ -d \"${TARGET_BUILD_DIR}\" ]; then\n  find \"${TARGET_BUILD_DIR}\" -name '._*' -print -delete || true\n  find \"${TARGET_BUILD_DIR}\" -exec xattr -c {} + || true\nfi\nif [ -d \"${SRCROOT}/LeapAudioDemo/Exhibits/Data\" ]; then\n  find \"${SRCROOT}/LeapAudioDemo/Exhibits/Data\" -name '._*' -print -delete || true\n  find \"${SRCROOT}/LeapAudioDemo/Exhibits/Data\" -exec xattr -c {} + || true\nfi\necho \"[Sanitize Bundle] Cleaned ${APP_DIR}\"\n";
+		};
+		C1DAAF34195D52A0B1D2CB2C /* Copy Artwork Images */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Artwork Images";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -d \"${SRCROOT}/LeapAudioDemo/Resources/Artworks\" ]; then\n  mkdir -p \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Artworks\"\n  rsync -a --exclude='.DS_Store' --exclude='._*' \"${SRCROOT}/LeapAudioDemo/Resources/Artworks/\" \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Artworks/\"\n  echo \"[Copy Artwork Images] Copied Artworks\"\nelse\n  echo \"[Copy Artwork Images] Skipped (no Artworks folder)\"\nfi\n";
 		};
 		E37AB44BB70482FDFD525CF4 /* Copy GGUF Models */ = {
 			isa = PBXShellScriptBuildPhase;

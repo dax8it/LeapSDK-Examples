@@ -78,6 +78,16 @@ targets:
         name: Copy JSON Data
         basedOnDependencyAnalysis: false
       - script: |
+          if [ -d "${SRCROOT}/LeapAudioDemo/Resources/Artworks" ]; then
+            mkdir -p "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Artworks"
+            rsync -a --exclude='.DS_Store' --exclude='._*' "${SRCROOT}/LeapAudioDemo/Resources/Artworks/" "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Artworks/"
+            echo "[Copy Artwork Images] Copied Artworks"
+          else
+            echo "[Copy Artwork Images] Skipped (no Artworks folder)"
+          fi
+        name: Copy Artwork Images
+        basedOnDependencyAnalysis: false
+      - script: |
           APP_DIR="${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}"
           if [ -d "${APP_DIR}" ]; then
             find "${APP_DIR}" -name '._*' -print -delete || true

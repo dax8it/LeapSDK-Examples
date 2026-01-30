@@ -57,6 +57,7 @@ final class ExhibitLibraryStore {
             isLoading = false
 #if DEBUG
             logBundlePathsIfNeeded()
+            logExhibitImageDiagnostics(exhibits: loadedExhibits)
 #endif
             print("[ExhibitLibraryStore] ✅ Loaded \(exhibits.count) exhibits, \(exhibitsWithImages.count) with images")
         } catch {
@@ -223,6 +224,18 @@ final class ExhibitLibraryStore {
         let worksPath = Bundle.main.url(forResource: "works", withExtension: "json", subdirectory: "Exhibits/Data/\(first.id)")?.path ?? "nil"
         print("[ExhibitLibraryStore] 🔍 \(first.id)/artist.json path: \(artistPath)")
         print("[ExhibitLibraryStore] 🔍 \(first.id)/works.json path: \(worksPath)")
+    }
+
+    private func logExhibitImageDiagnostics(exhibits: [ExhibitMeta]) {
+        for exhibit in exhibits {
+            let coverName = exhibit.effectiveCoverImageName ?? "(none)"
+            let exists = coverName != "(none)" && imageExists(named: coverName)
+            if exists {
+                print("[ExhibitLibraryStore] ✅ cover image found for \(exhibit.id): \(coverName)")
+            } else {
+                print("[ExhibitLibraryStore] ❌ cover image missing for \(exhibit.id): \(coverName)")
+            }
+        }
     }
 #endif
     
