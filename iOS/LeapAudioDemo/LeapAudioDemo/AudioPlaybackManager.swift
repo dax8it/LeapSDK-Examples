@@ -17,21 +17,22 @@ final class AudioPlaybackManager {
   // Frame-based buffering: aggregate samples into fixed-duration frames
   private var sampleBuffer: [Float] = []
   private var currentSampleRate: Int = 24000
-  private let frameDurationMs: Double = 30  // 30ms frames
+  private let frameDurationMs: Double = 40  // 40ms frames
   private var frameSize: Int { Int(Double(currentSampleRate) * frameDurationMs / 1000.0) }
+  private var totalQueuedSamples: Int { sampleBuffer.count + (scheduledFrameCount * frameSize) }
   
   // Jitter buffer: wait for minimum audio before starting playback
-  private let jitterBufferMs: Double = 300  // 300ms jitter buffer
+  private let jitterBufferMs: Double = 600  // 600ms jitter buffer
   private var jitterBufferSamples: Int { Int(Double(currentSampleRate) * jitterBufferMs / 1000.0) }
   private var hasStartedPlayback = false
   
   // Hysteresis: refill mode to prevent stutter oscillation
-  private let refillThresholdMs: Double = 160  // Enter refill mode if buffer dips below this
+  private let refillThresholdMs: Double = 350  // Enter refill mode if buffer dips below this
   private var refillThresholdSamples: Int { Int(Double(currentSampleRate) * refillThresholdMs / 1000.0) }
   private var isInRefillMode = false
   
   // Max queue cap to prevent runaway latency (backpressure)
-  private let maxQueueMs: Double = 1500  // 1.5 seconds max
+  private let maxQueueMs: Double = 6000  // 6.0 seconds max
   private var maxQueueSamples: Int { Int(Double(currentSampleRate) * maxQueueMs / 1000.0) }
   
   // Diagnostic logging
@@ -180,8 +181,8 @@ final class AudioPlaybackManager {
       // Backpressure: cap queue at max to prevent runaway latency
       if self.sampleBuffer.count > self.maxQueueSamples {
         let excess = self.sampleBuffer.count - self.maxQueueSamples
-        self.sampleBuffer.removeFirst(excess)
-        print("[AudioPlaybackManager] ⚠️ Backpressure: dropped \(excess) oldest samples (queue capped at \(self.maxQueueMs)ms)")
+        self.sampleBuffer.removeLast(excess)
+        print("[AudioPlaybackManager] ⚠️ Backpressure: dropped \(excess) newest samples (queue capped at \(self.maxQueueMs)ms)")
       }
       
       // Check if we have enough for jitter buffer (first time only)
@@ -198,18 +199,20 @@ final class AudioPlaybackManager {
         }
       } else if self.isInRefillMode {
         // In refill mode: wait until we reach jitter buffer threshold again
-        if self.sampleBuffer.count >= self.jitterBufferSamples {
-          print("[AudioPlaybackManager] 🔄 Exiting refill mode (buffer restored to \(self.sampleBuffer.count) samples)")
+        let totalQueuedSamples = self.totalQueuedSamples
+        if totalQueuedSamples >= self.jitterBufferSamples {
+          print("[AudioPlaybackManager] 🔄 Exiting refill mode (buffer restored to \(totalQueuedSamples) samples total)")
           self.isInRefillMode = false
           self.drainBufferToFrames()
         }
       } else {
         // Normal mode: drain available frames
         self.drainBufferToFrames()
-        
+
         // Check if we need to enter refill mode (hysteresis)
-        if self.sampleBuffer.count < self.refillThresholdSamples && self.sampleBuffer.count > 0 {
-          print("[AudioPlaybackManager] 🔄 Entering refill mode (buffer low: \(self.sampleBuffer.count) samples)")
+        let totalQueuedSamples = self.totalQueuedSamples
+        if totalQueuedSamples < self.refillThresholdSamples && totalQueuedSamples > 0 {
+          print("[AudioPlaybackManager] 🔄 Entering refill mode (buffer low: \(totalQueuedSamples) samples total)")
           self.isInRefillMode = true
         }
       }
@@ -244,9 +247,10 @@ final class AudioPlaybackManager {
       
       player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
         self?.queue.async {
-          self?.scheduledFrameCount -= 1
-          self?.lastProgressTime = Date()  // Track progress for stuck detection
-          self?.checkPlaybackComplete()
+          guard let self else { return }
+          self.scheduledFrameCount = max(0, self.scheduledFrameCount - 1)
+          self.lastProgressTime = Date()  // Track progress for stuck detection
+          self.checkPlaybackComplete()
         }
       }
     }
@@ -305,8 +309,9 @@ final class AudioPlaybackManager {
         
         self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
           self?.queue.async {
-            self?.scheduledFrameCount -= 1
-            self?.checkPlaybackComplete()
+            guard let self else { return }
+            self.scheduledFrameCount = max(0, self.scheduledFrameCount - 1)
+            self.checkPlaybackComplete()
           }
         }
         
