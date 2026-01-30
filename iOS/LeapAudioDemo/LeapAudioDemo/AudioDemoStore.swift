@@ -261,6 +261,8 @@ final class AudioDemoStore {
       status = "Received function call: \(calls.count)"
     case .complete(let completion):
       finish(with: completion)
+    @unknown default:
+      status = "Received unknown response"
     }
   }
 
@@ -316,6 +318,8 @@ final class AudioDemoStore {
       return "Response complete."
     case .exceed_context:
       return "Context window exceeded."
+    @unknown default:
+      return "Response finished."
     }
   }
 

@@ -41,7 +41,6 @@ enum AudioResampler {
         vDSP_vsadd(output, 1, &negativeMean, &dcRemoved, 1, vDSP_Length(output.count))
         
         let inputDuration = Double(samples.count) / Double(sourceSampleRate)
-        let outputDuration = Double(dcRemoved.count) / Double(modelSampleRate)
         AudioDebug.log("[AudioResampler] \(samples.count)@\(sourceSampleRate)Hz → \(dcRemoved.count)@\(modelSampleRate)Hz (\(String(format: "%.2f", inputDuration))s)")
         
         return dcRemoved
