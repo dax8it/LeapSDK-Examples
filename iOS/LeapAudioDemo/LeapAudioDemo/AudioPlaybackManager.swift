@@ -21,12 +21,12 @@ final class AudioPlaybackManager {
   private var frameSize: Int { Int(Double(currentSampleRate) * frameDurationMs / 1000.0) }
   
   // Jitter buffer: wait for minimum audio before starting playback
-  private let jitterBufferMs: Double = 250  // 250ms jitter buffer
+  private let jitterBufferMs: Double = 300  // 300ms jitter buffer
   private var jitterBufferSamples: Int { Int(Double(currentSampleRate) * jitterBufferMs / 1000.0) }
   private var hasStartedPlayback = false
   
   // Hysteresis: refill mode to prevent stutter oscillation
-  private let refillThresholdMs: Double = 120  // Enter refill mode if buffer dips below this
+  private let refillThresholdMs: Double = 160  // Enter refill mode if buffer dips below this
   private var refillThresholdSamples: Int { Int(Double(currentSampleRate) * refillThresholdMs / 1000.0) }
   private var isInRefillMode = false
   
