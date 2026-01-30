@@ -447,7 +447,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data\"\ncp -R \"${SRCROOT}/LeapAudioDemo/Gallery/Data/\"* \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data/\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data\"\ncp -R \"${SRCROOT}/LeapAudioDemo/Exhibits/Data/\"* \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data/\"\n";
+			shellScript = "mkdir -p \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data\"\nrsync -a \"${SRCROOT}/LeapAudioDemo/Gallery/Data/\" \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data/\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data\"\nrsync -a \"${SRCROOT}/LeapAudioDemo/Exhibits/Data/\" \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data/\"\necho \"[Copy JSON Data] Copied Gallery/Data and Exhibits/Data\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

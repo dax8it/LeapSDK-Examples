@@ -71,9 +71,10 @@ targets:
         basedOnDependencyAnalysis: false
       - script: |
           mkdir -p "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data"
-          cp -R "${SRCROOT}/LeapAudioDemo/Gallery/Data/"* "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data/"
+          rsync -a "${SRCROOT}/LeapAudioDemo/Gallery/Data/" "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Gallery/Data/"
           mkdir -p "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data"
-          cp -R "${SRCROOT}/LeapAudioDemo/Exhibits/Data/"* "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data/"
+          rsync -a "${SRCROOT}/LeapAudioDemo/Exhibits/Data/" "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Exhibits/Data/"
+          echo "[Copy JSON Data] Copied Gallery/Data and Exhibits/Data"
         name: Copy JSON Data
         basedOnDependencyAnalysis: false
       - script: |

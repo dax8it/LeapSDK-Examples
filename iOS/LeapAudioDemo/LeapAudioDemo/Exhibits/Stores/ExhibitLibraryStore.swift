@@ -160,6 +160,14 @@ final class ExhibitLibraryStore {
     
     private func loadJSON<T: Decodable>(_ name: String, subdirectory: String) throws -> T {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: subdirectory) else {
+#if DEBUG
+            print("[ExhibitLibraryStore] ❌ Missing \(subdirectory)/\(name).json")
+            print("[ExhibitLibraryStore] 📦 bundle: \(Bundle.main.bundlePath)")
+            if let dataURL = Bundle.main.url(forResource: nil, withExtension: nil, subdirectory: "Exhibits/Data") {
+                let contents = (try? FileManager.default.contentsOfDirectory(atPath: dataURL.path)) ?? []
+                print("[ExhibitLibraryStore] 📂 Exhibits/Data contents: \(contents)")
+            }
+#endif
             guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
                 throw ExhibitLibraryError.fileNotFound("\(subdirectory)/\(name).json")
             }
@@ -174,6 +182,14 @@ final class ExhibitLibraryStore {
         let subdirectory = components.dropLast().joined(separator: "/")
         
         guard let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: subdirectory) else {
+#if DEBUG
+            print("[ExhibitLibraryStore] ❌ Missing \(subdirectory)/\(name).json")
+            print("[ExhibitLibraryStore] 📦 bundle: \(Bundle.main.bundlePath)")
+            if let dataURL = Bundle.main.url(forResource: nil, withExtension: nil, subdirectory: "Exhibits/Data") {
+                let contents = (try? FileManager.default.contentsOfDirectory(atPath: dataURL.path)) ?? []
+                print("[ExhibitLibraryStore] 📂 Exhibits/Data contents: \(contents)")
+            }
+#endif
             guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
                 throw ExhibitLibraryError.fileNotFound("\(path).json")
             }
