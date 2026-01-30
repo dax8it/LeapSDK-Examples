@@ -24,10 +24,7 @@ final class ExhibitLibraryStore {
     
     /// Exhibits that have at least one work with a valid image
     var exhibitsWithImages: [ExhibitMeta] {
-        exhibits.filter { exhibit in
-            guard let imageName = exhibit.effectiveCoverImageName else { return false }
-            return imageExists(named: imageName)
-        }
+        exhibits
     }
     
     func loadIndex() {
@@ -59,7 +56,11 @@ final class ExhibitLibraryStore {
             logBundlePathsIfNeeded()
             logExhibitImageDiagnostics(exhibits: loadedExhibits)
 #endif
-            print("[ExhibitLibraryStore] ✅ Loaded \(exhibits.count) exhibits, \(exhibitsWithImages.count) with images")
+            let coverCount = loadedExhibits.filter { exhibit in
+                guard let imageName = exhibit.effectiveCoverImageName else { return false }
+                return imageExists(named: imageName)
+            }.count
+            print("[ExhibitLibraryStore] ✅ Loaded \(exhibits.count) exhibits (covers found: \(coverCount))")
         } catch {
             loadError = "Failed to load exhibit index: \(error.localizedDescription)"
             isLoaded = false
