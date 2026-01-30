@@ -481,7 +481,7 @@ final class ConversationLoop {
     }
     
     private func processUserAudio(samples: [Float], sampleRate: Int) async {
-        guard let modelRunner, isActive else { return }
+        guard modelRunner != nil, isActive else { return }
         
         // SINGLE-FLIGHT: Block if generation already in progress
         if isGenerationInProgress {

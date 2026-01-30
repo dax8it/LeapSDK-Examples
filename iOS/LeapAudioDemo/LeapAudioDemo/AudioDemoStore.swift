@@ -107,7 +107,7 @@ final class AudioDemoStore {
       print("  audioTokenizerPath: \(audioTokenizerPath ?? "nil")")
       print("  vocoderPath: \(vocoderPath ?? "nil")")
       
-      var options = LiquidInferenceEngineOptions(
+      let options = LiquidInferenceEngineOptions(
         bundlePath: modelURL.path(),
         contextSize: 8192,
         nGpuLayers: 0,
